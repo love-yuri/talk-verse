@@ -1,19 +1,15 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_dimensions.dart';
 import '../constants/app_text_styles.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
 import '../utils/date_utils.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input.dart';
+import '../widgets/warm_background.dart';
 
-/// 聊天屏幕
-/// 实现完整的聊天界面，包含消息列表和输入框
 class ChatScreen extends StatefulWidget {
   final ChatSession session;
-
   const ChatScreen({super.key, required this.session});
 
   @override
@@ -21,347 +17,151 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final _msgCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   final List<Message> _messages = [];
   bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    _messages.addAll([
+      Message(id: '1', content: widget.session.characterName == '小助手' ? '你好！我是你的智能助手，有什么可以帮你的吗？' : '你好！很高兴认识你！', type: MessageType.ai, timestamp: DateTime.now().subtract(const Duration(minutes: 5))),
+      Message(id: '2', content: '你好！', type: MessageType.user, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
+      Message(id: '3', content: '很高兴见到你！今天想聊些什么呢？', type: MessageType.ai, timestamp: DateTime.now().subtract(const Duration(minutes: 3))),
+    ]);
   }
 
   @override
   void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
+    _msgCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
-  }
-
-  /// 加载消息
-  void _loadMessages() {
-    // 临时添加一些示例消息
-    _messages.addAll([
-      Message(
-        id: '1',
-        content: widget.session.characterName == '小助手'
-            ? '你好！我是你的智能助手，有什么可以帮你的吗？'
-            : '你好！很高兴认识你！',
-        type: MessageType.ai,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-      Message(
-        id: '2',
-        content: '你好！',
-        type: MessageType.user,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-      ),
-      Message(
-        id: '3',
-        content: '很高兴见到你！今天想聊些什么呢？',
-        type: MessageType.ai,
-        timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-      ),
-    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          _buildAppBar(),
-          Expanded(child: _buildMessageList()),
-          _buildInputArea(),
-        ],
-      ),
+      body: Column(children: [
+        _buildAppBar(),
+        Expanded(child: _buildMessages()),
+        _buildInput(),
+      ]),
     );
   }
 
-  /// 构建应用栏（带毛玻璃效果）
   Widget _buildAppBar() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.glass,
-            border: Border(
-              bottom: BorderSide(
-                color: AppColors.glassBorder,
-                width: 0.5,
-              ),
+    final colorIdx = widget.session.characterId.hashCode.abs() % AppColors.avatarColors.length;
+    final color = AppColors.avatarColors[colorIdx];
+
+    return Container(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(children: [
+          TapScale(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.arrow_back_ios_new, size: 15, color: AppColors.textPrimary),
             ),
           ),
-          child: _buildAppBarContent(),
-        ),
-      ),
-    );
-  }
-
-  /// 构建应用栏内容
-  Widget _buildAppBarContent() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.paddingLg,
-        vertical: AppDimensions.paddingMd,
-      ),
-      child: Row(
-        children: [
-          _buildBackButton(),
-          const SizedBox(width: AppDimensions.spacingMd),
-          _buildCharacterInfo(),
+          const SizedBox(width: 10),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+            child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontSize: 17))),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.session.characterName, style: AppTextStyles.label.copyWith(fontSize: 14)),
+              Text(_isTyping ? '正在输入...' : '在线', style: AppTextStyles.labelSmall.copyWith(color: _isTyping ? AppColors.accent : AppColors.success, fontSize: 10)),
+            ],
+          ),
           const Spacer(),
-          _buildMoreButton(),
-        ],
-      ),
-    );
-  }
-
-  /// 构建返回按钮
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppColors.surface.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          size: 18,
-          color: AppColors.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  /// 构建角色信息
-  Widget _buildCharacterInfo() {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-          ),
-          child: Center(
-            child: Text(
-              widget.session.characterAvatar,
-              style: const TextStyle(fontSize: 20),
+          TapScale(
+            onTap: () {},
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.more_vert, size: 16, color: AppColors.textPrimary),
             ),
           ),
-        ),
-        const SizedBox(width: AppDimensions.spacingMd),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.session.characterName,
-              style: AppTextStyles.labelLarge,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _isTyping ? '正在输入...' : '在线',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: _isTyping ? AppColors.primary : AppColors.success,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  /// 构建更多按钮
-  Widget _buildMoreButton() {
-    return GestureDetector(
-      onTap: () {
-        // TODO: 显示更多选项
-      },
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppColors.surface.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-        ),
-        child: const Icon(
-          Icons.more_vert,
-          size: 18,
-          color: AppColors.textPrimary,
-        ),
+        ]),
       ),
     );
   }
 
-  /// 构建消息列表
-  Widget _buildMessageList() {
+  Widget _buildMessages() {
     return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.paddingLg,
-        vertical: AppDimensions.paddingMd,
-      ),
+      controller: _scrollCtrl,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        return _buildMessageItem(message, index);
+      itemBuilder: (context, i) {
+        final showTime = i == 0 || _messages[i].timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
+        return Column(children: [
+          if (showTime) _timeDivider(_messages[i].timestamp),
+          ChatBubble(message: _messages[i], characterAvatar: widget.session.characterAvatar, characterName: widget.session.characterName),
+        ]);
       },
     );
   }
 
-  /// 构建消息项
-  Widget _buildMessageItem(Message message, int index) {
-    // 检查是否需要显示时间
-    final showTime = _shouldShowTime(index);
-    return Column(
-      children: [
-        if (showTime) _buildTimeDivider(message.timestamp),
-        ChatBubble(
-          message: message,
-          characterAvatar: widget.session.characterAvatar,
-          characterName: widget.session.characterName,
-        ),
-      ],
-    );
-  }
-
-  /// 检查是否需要显示时间
-  bool _shouldShowTime(int index) {
-    if (index == 0) return true;
-    final currentMessage = _messages[index];
-    final previousMessage = _messages[index - 1];
-    final difference = currentMessage.timestamp.difference(previousMessage.timestamp);
-    return difference.inMinutes > 5;
-  }
-
-  /// 构建时间分隔线
-  Widget _buildTimeDivider(DateTime timestamp) {
+  Widget _timeDivider(DateTime t) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingMd),
-      child: Row(
-        children: [
-          const Expanded(child: Divider(color: AppColors.borderLight)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacingMd),
-            child: Text(
-              AppDateUtils.formatChatTime(timestamp),
-              style: AppTextStyles.chatTime,
-            ),
-          ),
-          const Expanded(child: Divider(color: AppColors.borderLight)),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(AppDateUtils.formatChatTime(t), style: AppTextStyles.chatTime),
     );
   }
 
-  /// 构建输入区域
-  Widget _buildInputArea() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.glass,
-            border: Border(
-              top: BorderSide(
-                color: AppColors.glassBorder,
-                width: 0.5,
-              ),
-            ),
-          ),
-          child: ChatInput(
-            controller: _messageController,
-            onSend: _sendMessage,
-            onTextChanged: (text) {
-              // TODO: 处理文本变化
-            },
-          ),
-        ),
+  Widget _buildInput() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
       ),
+      child: ChatInput(controller: _msgCtrl, onSend: _send, onTextChanged: (_) {}),
     );
   }
 
-  /// 发送消息
-  void _sendMessage() {
-    final content = _messageController.text.trim();
-    if (content.isEmpty) return;
-
-    final message = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: content,
-      type: MessageType.user,
-      timestamp: DateTime.now(),
-    );
-
+  void _send() {
+    final text = _msgCtrl.text.trim();
+    if (text.isEmpty) return;
     setState(() {
-      _messages.add(message);
-      _messageController.clear();
+      _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), content: text, type: MessageType.user, timestamp: DateTime.now()));
+      _msgCtrl.clear();
     });
-
     _scrollToBottom();
-    _simulateAIResponse();
-  }
-
-  /// 模拟AI响应
-  void _simulateAIResponse() {
-    setState(() {
-      _isTyping = true;
-    });
-
-    // 模拟延迟
+    setState(() => _isTyping = true);
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
-
-      final response = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: _generateAIResponse(),
-        type: MessageType.ai,
-        timestamp: DateTime.now(),
-      );
-
       setState(() {
-        _messages.add(response);
+        _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), content: _aiReply(), type: MessageType.ai, timestamp: DateTime.now()));
         _isTyping = false;
       });
-
       _scrollToBottom();
     });
   }
 
-  /// 生成AI响应（临时实现）
-  String _generateAIResponse() {
-    final responses = [
-      '我明白了，让我想想...',
-      '这是个好问题！',
-      '我理解你的意思。',
-      '让我来帮你分析一下。',
-      '你说得对，我们可以继续探讨这个话题。',
-      '我同意你的观点。',
-      '这是一个有趣的角度。',
-      '让我为你提供更多信息。',
-    ];
-    return responses[DateTime.now().millisecond % responses.length];
+  String _aiReply() {
+    const r = ['我明白了，让我想想...', '这是个好问题！', '我理解你的意思。', '让我来帮你分析一下。', '你说得对。', '这是一个有趣的角度。'];
+    return r[DateTime.now().millisecond % r.length];
   }
 
-  /// 滚动到底部
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+    if (_scrollCtrl.hasClients) {
+      _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_text_styles.dart';
 import '../models/character.dart';
+import '../models/chat_session.dart';
+import '../widgets/warm_background.dart';
+import 'chat_screen.dart';
 
 class CharacterListScreen extends StatefulWidget {
   const CharacterListScreen({super.key});
@@ -11,51 +15,11 @@ class CharacterListScreen extends StatefulWidget {
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
   final List<Character> _characters = [
-    Character(
-      id: 'ai_1',
-      name: '小助手',
-      avatar: '🤖',
-      description: '你的智能AI助手，随时为你解答问题',
-      personality: '友好、专业、耐心',
-      greeting: '你好！我是你的智能助手，有什么可以帮你的吗？',
-      tags: ['助手', '问答'],
-    ),
-    Character(
-      id: 'ai_2',
-      name: '诗人',
-      avatar: '📝',
-      description: '一位才华横溢的诗人，能为你创作优美的诗句',
-      personality: '浪漫、文艺、感性',
-      greeting: '月光如水，诗意盎然。让我们一起在文字的海洋中遨游吧。',
-      tags: ['创作', '诗歌'],
-    ),
-    Character(
-      id: 'ai_3',
-      name: '朋友',
-      avatar: '😊',
-      description: '一个温暖的朋友，陪你聊天解闷',
-      personality: '开朗、幽默、善解人意',
-      greeting: '嘿！好久不见，最近怎么样？',
-      tags: ['聊天', '陪伴'],
-    ),
-    Character(
-      id: 'ai_4',
-      name: '老师',
-      avatar: '👨‍🏫',
-      description: '一位知识渊博的老师，帮你解答学习问题',
-      personality: '严谨、耐心、专业',
-      greeting: '同学们好！今天想学习什么呢？',
-      tags: ['教育', '学习'],
-    ),
-    Character(
-      id: 'ai_5',
-      name: '健身教练',
-      avatar: '💪',
-      description: '专业的健身教练，为你制定训练计划',
-      personality: '积极、鼓励、专业',
-      greeting: '准备好开始今天的训练了吗？让我们动起来！',
-      tags: ['健身', '健康'],
-    ),
+    Character(id: 'ai_1', name: '小助手', avatar: '🤖', description: '你的智能AI助手，随时为你解答问题', personality: '友好、专业、耐心', greeting: '你好！有什么可以帮你的吗？', tags: ['助手', '问答']),
+    Character(id: 'ai_2', name: '诗人', avatar: '📝', description: '一位才华横溢的诗人，能为你创作优美的诗句', personality: '浪漫、文艺', greeting: '月光如水，诗意盎然。', tags: ['创作', '诗歌']),
+    Character(id: 'ai_3', name: '朋友', avatar: '😊', description: '一个温暖的朋友，陪你聊天解闷', personality: '开朗、幽默', greeting: '嘿！好久不见！', tags: ['聊天', '陪伴']),
+    Character(id: 'ai_4', name: '老师', avatar: '👨‍🏫', description: '一位知识渊博的老师，帮你解答学习问题', personality: '严谨、耐心', greeting: '同学们好！', tags: ['教育', '学习']),
+    Character(id: 'ai_5', name: '健身教练', avatar: '💪', description: '专业的健身教练，为你制定训练计划', personality: '积极、鼓励', greeting: '准备好开始训练了吗？', tags: ['健身', '健康']),
   ];
 
   @override
@@ -66,7 +30,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            Expanded(child: _buildCharacterList()),
+            Expanded(child: _buildGrid()),
           ],
         ),
       ),
@@ -74,162 +38,105 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
       child: Row(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '角色',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_characters.length} 个角色等你探索',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${_characters.length} 个角色', style: AppTextStyles.greeting),
+              const SizedBox(height: 2),
+              const Text('发现', style: AppTextStyles.h1),
+            ],
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border, width: 0.5),
-            ),
-            child: Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
-          ),
+          const Spacer(),
+          _iconBtn(Icons.search_rounded, () {}),
         ],
       ),
     );
   }
 
-  Widget _buildCharacterList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: _characters.length,
-      itemBuilder: (context, index) {
-        return _buildCharacterCard(_characters[index], index);
-      },
+  Widget _iconBtn(IconData icon, VoidCallback onTap) {
+    return TapScale(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+      ),
     );
   }
 
-  Widget _buildCharacterCard(Character character, int index) {
-    final gradient = AppColors.avatarGradients[index % AppColors.avatarGradients.length];
+  Widget _buildGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: _characters.length,
+      itemBuilder: (context, i) => _buildCard(_characters[i], i),
+    );
+  }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => _startChat(character),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border, width: 0.5),
+  Widget _buildCard(Character character, int index) {
+    final color = AppColors.avatarColors[index % AppColors.avatarColors.length];
+
+    return TapScale(
+      onTap: () => _startChat(character),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border, width: 0.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+              child: Center(child: Text(character.avatar, style: const TextStyle(fontSize: 26))),
             ),
-            child: Row(
-              children: [
-                // 头像
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(character.avatar, style: const TextStyle(fontSize: 28)),
-                  ),
+            const SizedBox(height: 10),
+            Text(character.name, style: AppTextStyles.label),
+            const SizedBox(height: 3),
+            Text(character.description, style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: character.tags.take(2).map((tag) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(5)),
+                  child: Text(tag, style: AppTextStyles.labelSmall.copyWith(fontSize: 10)),
                 ),
-                const SizedBox(width: 14),
-                // 信息
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        character.name,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        character.description,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          ...character.tags.map((tag) => Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: gradient[0].withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                tag,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: gradient[0],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          )),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // 箭头
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: AppColors.textTertiary,
-                ),
-              ],
+              )).toList(),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
   void _startChat(Character character) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('开始与${character.name}对话')),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
+      session: ChatSession(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        characterId: character.id,
+        characterName: character.name,
+        characterAvatar: character.avatar,
+        messages: [],
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    )));
   }
 }

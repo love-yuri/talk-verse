@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_dimensions.dart';
 import 'chat_list_screen.dart';
 import 'character_list_screen.dart';
 import 'profile_screen.dart';
@@ -13,55 +12,41 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+  int _idx = 0;
 
-  static const _navItems = [
-    _NavItem(Icons.chat_bubble_outline, Icons.chat_bubble, '聊天'),
-    _NavItem(Icons.people_outline, Icons.people, '角色'),
-    _NavItem(Icons.person_outline, Icons.person, '我的'),
+  static const _items = [
+    _Nav(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, '聊天'),
+    _Nav(Icons.explore_outlined, Icons.explore_rounded, '发现'),
+    _Nav(Icons.person_outline_rounded, Icons.person_rounded, '我的'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          ChatListScreen(),
-          CharacterListScreen(),
-          ProfileScreen(),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNavBar(),
-    );
-  }
-
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: AppColors.border, width: 0.5),
+      body: IndexedStack(index: _idx, children: const [
+        ChatListScreen(),
+        CharacterListScreen(),
+        ProfileScreen(),
+      ]),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.navBackground,
+          border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
         ),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: AppDimensions.bottomNavHeight,
-          child: Row(
-            children: List.generate(
-              _navItems.length,
-              (i) => Expanded(child: _buildNavItem(i, _navItems[i])),
-            ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 52,
+            child: Row(children: List.generate(_items.length, (i) => Expanded(child: _navItem(i, _items[i])))),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, _NavItem item) {
-    final isActive = _currentIndex == index;
+  Widget _navItem(int i, _Nav item) {
+    final active = _idx == i;
     return GestureDetector(
-      onTap: () => _onItemTapped(index),
+      onTap: () { if (i != _idx) setState(() => _idx = i); },
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -69,42 +54,28 @@ class _MainScreenState extends State<MainScreen> {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primarySurface : Colors.transparent,
+              color: active ? AppColors.accentLight : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              isActive ? item.activeIcon : item.inactiveIcon,
-              size: 22,
-              color: isActive ? AppColors.primary : AppColors.textTertiary,
-            ),
+            child: Icon(active ? item.active : item.inactive, size: 22, color: active ? AppColors.navActive : AppColors.navInactive),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? AppColors.primary : AppColors.textTertiary,
-            ),
+            style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive),
             child: Text(item.label),
           ),
         ],
       ),
     );
   }
-
-  void _onItemTapped(int index) {
-    if (index == _currentIndex) return;
-    setState(() => _currentIndex = index);
-  }
 }
 
-class _NavItem {
-  final IconData inactiveIcon;
-  final IconData activeIcon;
+class _Nav {
+  final IconData inactive;
+  final IconData active;
   final String label;
-
-  const _NavItem(this.inactiveIcon, this.activeIcon, this.label);
+  const _Nav(this.inactive, this.active, this.label);
 }

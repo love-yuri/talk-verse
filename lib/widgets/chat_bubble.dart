@@ -20,61 +20,79 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.type == MessageType.user;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser) _avatar(characterAvatar, AppColors.avatarColors[0]),
+          if (!isUser) _avatar(characterAvatar),
           if (!isUser) const SizedBox(width: 8),
-          Flexible(child: _bubble(isUser)),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                _bubble(isUser),
+                const SizedBox(height: 3),
+                Text(AppDateUtils.formatTime(message.timestamp), style: AppTextStyles.chatTime),
+              ],
+            ),
+          ),
           if (isUser) const SizedBox(width: 8),
-          if (isUser) _avatar('👤', AppColors.textTertiary),
+          if (isUser) _avatar('🎀'),
         ],
       ),
     );
   }
 
-  Widget _avatar(String emoji, Color color) {
+  Widget _avatar(String emoji) {
     return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
-      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 15))),
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE8B4F8), Color(0xFFB4D0F8)],
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(child: Text(emoji, style: const TextStyle(fontSize: 18))),
+      ),
     );
   }
 
   Widget _bubble(bool isUser) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 260),
+      constraints: const BoxConstraints(maxWidth: 240),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
         color: isUser ? AppColors.bubbleUser : AppColors.bubbleAI,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(14),
-          topRight: const Radius.circular(14),
-          bottomLeft: Radius.circular(isUser ? 14 : 4),
-          bottomRight: Radius.circular(isUser ? 4 : 14),
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isUser ? 16 : 4),
+          bottomRight: Radius.circular(isUser ? 4 : 16),
         ),
-        border: isUser ? null : Border.all(color: AppColors.border, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: isUser
+                ? const Color(0xFFD4BBFF).withValues(alpha: 0.3)
+                : AppColors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!isUser)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(characterName, style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600)),
-              ),
-            Text(message.content, style: isUser ? AppTextStyles.chatMessageWhite : AppTextStyles.chatMessage),
-            const SizedBox(height: 2),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(AppDateUtils.formatTime(message.timestamp), style: AppTextStyles.chatTime.copyWith(color: isUser ? Colors.white70 : AppColors.textTertiary)),
-            ),
-          ],
-        ),
+      child: Text(
+        message.content,
+        style: isUser ? AppTextStyles.chatMessageUser : AppTextStyles.chatMessage,
       ),
     );
   }

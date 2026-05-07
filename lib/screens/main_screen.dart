@@ -29,13 +29,15 @@ class _MainScreenState extends State<MainScreen> {
         ProfileScreen(),
       ]),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.navBackground,
-          border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, -2)),
+          ],
         ),
         child: SafeArea(
           child: SizedBox(
-            height: 52,
+            height: 56,
             child: Row(children: List.generate(_items.length, (i) => Expanded(child: _navItem(i, _items[i])))),
           ),
         ),
@@ -54,17 +56,17 @@ class _MainScreenState extends State<MainScreen> {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
             decoration: BoxDecoration(
-              color: active ? AppColors.accentLight : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
+              gradient: active ? const LinearGradient(colors: [Color(0xFFE8B4F8), Color(0xFFD4BBFF)]) : null,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(active ? item.active : item.inactive, size: 22, color: active ? AppColors.navActive : AppColors.navInactive),
+            child: Icon(active ? item.active : item.inactive, size: 22, color: active ? Colors.white : AppColors.navInactive),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive),
+            style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive),
             child: Text(item.label),
           ),
         ],

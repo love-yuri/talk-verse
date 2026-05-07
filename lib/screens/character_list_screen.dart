@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_text_styles.dart';
 import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../widgets/warm_background.dart';
@@ -26,57 +25,68 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildGrid()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFB4D0F8), Color(0xFFD4BBFF), Color(0xFFB8F0D8)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Row(
           children: [
-            _buildHeader(),
-            Expanded(child: _buildGrid()),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${_characters.length} 个角色可选 🌟', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(height: 2),
+                const Text('✨ 发现', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+              ],
+            ),
+            const Spacer(),
+            _headerIconBtn(Icons.search_rounded),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${_characters.length} 个角色', style: AppTextStyles.greeting),
-              const SizedBox(height: 2),
-              const Text('发现', style: AppTextStyles.h1),
-            ],
-          ),
-          const Spacer(),
-          _iconBtn(Icons.search_rounded, () {}),
-        ],
-      ),
-    );
-  }
-
-  Widget _iconBtn(IconData icon, VoidCallback onTap) {
+  Widget _headerIconBtn(IconData icon) {
     return TapScale(
-      onTap: onTap,
+      onTap: () {},
       child: Container(
         width: 34,
         height: 34,
-        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 18, color: Colors.white),
       ),
     );
   }
 
   Widget _buildGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.88,
       ),
       itemCount: _characters.length,
       itemBuilder: (context, i) => _buildCard(_characters[i], i),
@@ -91,32 +101,46 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border, width: 0.5),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 14, offset: const Offset(0, 6)),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-              child: Center(child: Text(character.avatar, style: const TextStyle(fontSize: 26))),
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(child: Text(character.avatar, style: const TextStyle(fontSize: 28))),
             ),
             const SizedBox(height: 10),
-            Text(character.name, style: AppTextStyles.label),
+            Text(character.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D))),
             const SizedBox(height: 3),
-            Text(character.description, style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-            const SizedBox(height: 8),
+            Text(character.description, style: TextStyle(fontSize: 11, color: Colors.grey[500]), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: character.tags.take(2).map((tag) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(5)),
-                  child: Text(tag, style: AppTextStyles.labelSmall.copyWith(fontSize: 10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(tag, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.8))),
                 ),
               )).toList(),
             ),

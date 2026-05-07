@@ -24,50 +24,58 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _sessions.isEmpty ? _buildEmpty() : _buildList()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE8B4F8), Color(0xFFB4D0F8), Color(0xFFF8C8E8)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Row(
           children: [
-            _buildHeader(),
-            Expanded(child: _sessions.isEmpty ? _buildEmpty() : _buildList()),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${_getGreeting()} ✨', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                const SizedBox(height: 2),
+                const Text('💬 对话', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+              ],
+            ),
+            const Spacer(),
+            _headerIconBtn(Icons.search_rounded),
+            const SizedBox(width: 8),
+            _headerIconBtn(Icons.edit_square),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_getGreeting(), style: AppTextStyles.greeting),
-              const SizedBox(height: 2),
-              const Text('对话', style: AppTextStyles.h1),
-            ],
-          ),
-          const Spacer(),
-          _iconBtn(Icons.search_rounded, () {}),
-          const SizedBox(width: 8),
-          _iconBtn(Icons.edit_square, () {}),
-        ],
-      ),
-    );
-  }
-
-  Widget _iconBtn(IconData icon, VoidCallback onTap) {
+  Widget _headerIconBtn(IconData icon) {
     return TapScale(
-      onTap: onTap,
+      onTap: () {},
       child: Container(
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: Colors.white.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+        child: Icon(icon, size: 18, color: Colors.white),
       ),
     );
   }
@@ -77,16 +85,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(20)),
-            child: const Icon(Icons.chat_bubble_outline_rounded, size: 28, color: AppColors.textTertiary),
-          ),
+          const Text('🌸', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          const Text('还没有对话', style: AppTextStyles.h3),
+          const Text('还没有对话', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B))),
           const SizedBox(height: 6),
-          Text('去发现页面，找到你的第一个聊天伙伴', style: AppTextStyles.bodySmall),
+          Text('去发现页面，找到你的第一个聊天伙伴', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
         ],
       ),
     );
@@ -94,7 +97,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   Widget _buildList() {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
       itemCount: _sessions.length,
       itemBuilder: (context, i) => _buildItem(_sessions[i]),
     );
@@ -110,28 +113,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
       ),
       onDismissed: (_) => _deleteSession(session),
       child: TapScale(
         onTap: () => _openChat(session),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border, width: 0.5),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)),
-                child: Center(child: Text(session.characterAvatar, style: const TextStyle(fontSize: 22))),
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(child: Text(session.characterAvatar, style: const TextStyle(fontSize: 24))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -139,17 +151,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Expanded(child: Text(session.characterName, style: AppTextStyles.label, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(session.characterName, style: AppTextStyles.label)),
                       Text(AppDateUtils.formatChatTime(session.updatedAt), style: AppTextStyles.labelSmall),
                     ]),
                     const SizedBox(height: 4),
                     Row(children: [
-                      Expanded(child: Text(session.lastMessage?.content ?? '点击开始对话...', style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text(session.lastMessage?.content ?? '点击开始对话 ♡', style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
                       if (session.unreadCount > 0) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Color(0xFFFFB6D9), Color(0xFFD4BBFF)]),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Text(session.unreadCount > 99 ? '99+' : '${session.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
                         ),
                       ],

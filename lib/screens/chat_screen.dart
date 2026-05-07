@@ -77,14 +77,17 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(10),
+          Hero(
+            tag: 'avatar_${widget.session.characterId}',
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontSize: 19))),
             ),
-            child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontSize: 19))),
           ),
           const SizedBox(width: 10),
           Column(

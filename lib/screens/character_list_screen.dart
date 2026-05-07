@@ -110,18 +110,21 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+            Hero(
+              tag: 'avatar_${character.id}',
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                borderRadius: BorderRadius.circular(16),
+                child: Center(child: Text(character.avatar, style: const TextStyle(fontSize: 28))),
               ),
-              child: Center(child: Text(character.avatar, style: const TextStyle(fontSize: 28))),
             ),
             const SizedBox(height: 10),
             Text(character.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D))),
@@ -151,16 +154,33 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   }
 
   void _startChat(Character character) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(
-      session: ChatSession(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        characterId: character.id,
-        characterName: character.name,
-        characterAvatar: character.avatar,
-        messages: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    )));
+    final session = ChatSession(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      characterId: character.id,
+      characterName: character.name,
+      characterAvatar: character.avatar,
+      messages: [],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    Navigator.push(context, _chatRoute(session));
   }
+}
+
+Route _chatRoute(ChatSession session) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session),
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }

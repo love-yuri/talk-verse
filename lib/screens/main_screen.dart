@@ -13,6 +13,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _idx = 0;
+  late final PageController _pageCtrl;
 
   static const _items = [
     _Nav(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, '聊天'),
@@ -21,13 +22,35 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController(initialPage: _idx);
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _switchTab(int i) {
+    if (i == _idx) return;
+    setState(() => _idx = i);
+    _pageCtrl.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _idx, children: const [
-        ChatListScreen(),
-        CharacterListScreen(),
-        ProfileScreen(),
-      ]),
+      body: PageView(
+        controller: _pageCtrl,
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          ChatListScreen(),
+          CharacterListScreen(),
+          ProfileScreen(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -48,14 +71,14 @@ class _MainScreenState extends State<MainScreen> {
   Widget _navItem(int i, _Nav item) {
     final active = _idx == i;
     return GestureDetector(
-      onTap: () { if (i != _idx) setState(() => _idx = i); },
+      onTap: () => _switchTab(i),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
             decoration: BoxDecoration(
               gradient: active ? const LinearGradient(colors: [Color(0xFFE8B4F8), Color(0xFFD4BBFF)]) : null,
@@ -65,7 +88,8 @@ class _MainScreenState extends State<MainScreen> {
           ),
           const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
             style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive),
             child: Text(item.label),
           ),

@@ -132,18 +132,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+              Hero(
+                tag: 'avatar_${session.characterId}',
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  child: Center(child: Text(session.characterAvatar, style: const TextStyle(fontSize: 24))),
                 ),
-                child: Center(child: Text(session.characterAvatar, style: const TextStyle(fontSize: 24))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -197,6 +200,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _openChat(ChatSession session) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen(session: session)));
+    Navigator.push(context, _chatRoute(session));
   }
+}
+
+Route _chatRoute(ChatSession session) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session),
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
 }

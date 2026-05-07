@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/warm_background.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -77,7 +78,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 const Text('✨ 我的空间', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                 const Spacer(),
-                _headerIconBtn(Icons.settings_outlined),
+                _headerIconBtn(Icons.settings_outlined, onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                }),
               ],
             ),
           ),
@@ -111,9 +114,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     )).toList();
   }
 
-  Widget _headerIconBtn(IconData icon) {
+  Widget _headerIconBtn(IconData icon, {VoidCallback? onTap}) {
     return TapScale(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Container(
         width: 34,
         height: 34,

@@ -44,6 +44,12 @@ dependencies:
   # 图标包
   font_awesome_flutter: ^10.7.0
 
+  # 持久化存储
+  shared_preferences: ^2.2.2
+
+  # HTTP 请求
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

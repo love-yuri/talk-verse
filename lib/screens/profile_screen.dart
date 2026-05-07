@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_dimensions.dart';
-import '../constants/app_text_styles.dart';
 
-/// 个人中心屏幕
-/// 显示用户信息和设置选项
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -17,231 +13,204 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-    );
-  }
-
-  /// 构建应用栏
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.surface,
-      elevation: 0,
-      title: const Text(
-        '个人中心',
-        style: AppTextStyles.h3,
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings, color: AppColors.textSecondary),
-          onPressed: () {
-            // TODO: 打开设置页面
-          },
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildProfileCard(),
+              const SizedBox(height: 16),
+              _buildMenuSection('常用', [
+                _MenuItem(Icons.history_rounded, '聊天记录', AppColors.info),
+                _MenuItem(Icons.favorite_border_rounded, '我的收藏', AppColors.accent),
+                _MenuItem(Icons.star_border_rounded, '我的评分', AppColors.warning),
+                _MenuItem(Icons.download_outlined, '下载管理', AppColors.success),
+              ]),
+              const SizedBox(height: 16),
+              _buildMenuSection('其他', [
+                _MenuItem(Icons.info_outline_rounded, '关于我们', AppColors.textSecondary),
+                _MenuItem(Icons.feedback_outlined, '意见反馈', AppColors.textSecondary),
+                _MenuItem(Icons.share_outlined, '分享给朋友', AppColors.textSecondary),
+              ]),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
-  /// 构建主体内容
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      child: Column(
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Row(
         children: [
-          _buildProfileHeader(),
-          const SizedBox(height: AppDimensions.spacingLg),
-          _buildMenuSection(),
-          const SizedBox(height: AppDimensions.spacingLg),
-          _buildAboutSection(),
+          Expanded(
+            child: Text(
+              '我的',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border, width: 0.5),
+            ),
+            child: Icon(Icons.settings_outlined, size: 20, color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
   }
 
-  /// 构建个人资料头部
-  Widget _buildProfileHeader() {
+  Widget _buildProfileCard() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppDimensions.padding2Xl),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          _buildAvatar(),
-          const SizedBox(height: AppDimensions.spacingLg),
-          _buildUserName(),
-          const SizedBox(height: AppDimensions.spacingSm),
-          _buildUserBio(),
-          const SizedBox(height: AppDimensions.spacingLg),
-          _buildStats(),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(Icons.person_rounded, size: 32, color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '用户',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '探索AI对话的无限可能',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.white.withValues(alpha: 0.5)),
         ],
       ),
     );
   }
 
-  /// 构建头像
-  Widget _buildAvatar() {
+  Widget _buildMenuSection(String title, List<_MenuItem> items) {
     return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.person,
-          size: 40,
-          color: AppColors.primary,
-        ),
-      ),
-    );
-  }
-
-  /// 构建用户名
-  Widget _buildUserName() {
-    return const Text(
-      '用户',
-      style: AppTextStyles.h3,
-    );
-  }
-
-  /// 构建用户简介
-  Widget _buildUserBio() {
-    return Text(
-      '这个人很懒，什么都没写~',
-      style: AppTextStyles.bodySmall,
-    );
-  }
-
-  /// 构建统计数据
-  Widget _buildStats() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildStatItem('对话', '12'),
-        _buildStatDivider(),
-        _buildStatItem('角色', '5'),
-        _buildStatDivider(),
-        _buildStatItem('消息', '156'),
-      ],
-    );
-  }
-
-  /// 构建统计项
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTextStyles.h3.copyWith(
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: AppDimensions.spacingXs),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall,
-        ),
-      ],
-    );
-  }
-
-  /// 构建统计分隔线
-  Widget _buildStatDivider() {
-    return Container(
-      height: 30,
-      width: 1,
-      color: AppColors.border,
-    );
-  }
-
-  /// 构建菜单部分
-  Widget _buildMenuSection() {
-    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 0.5),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMenuItem(Icons.history, '聊天记录'),
-          _buildDivider(),
-          _buildMenuItem(Icons.favorite_border, '我的收藏'),
-          _buildDivider(),
-          _buildMenuItem(Icons.star_border, '我的评分'),
-          _buildDivider(),
-          _buildMenuItem(Icons.download_outlined, '下载管理'),
-        ],
-      ),
-    );
-  }
-
-  /// 构建菜单项
-  Widget _buildMenuItem(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
-      title: Text(title, style: AppTextStyles.bodyMedium),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: AppColors.textTertiary,
-      ),
-      onTap: () {
-        // TODO: 处理菜单项点击
-      },
-    );
-  }
-
-  /// 构建分隔线
-  Widget _buildDivider() {
-    return const Divider(
-      height: 1,
-      indent: 56,
-      color: AppColors.borderLight,
-    );
-  }
-
-  /// 构建关于部分
-  Widget _buildAboutSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textTertiary,
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildMenuItem(Icons.info_outline, '关于我们'),
-          _buildDivider(),
-          _buildMenuItem(Icons.feedback_outlined, '意见反馈'),
-          _buildDivider(),
-          _buildMenuItem(Icons.share_outlined, '分享给朋友'),
+          ...items.asMap().entries.map((entry) {
+            final isLast = entry.key == items.length - 1;
+            return Column(
+              children: [
+                _buildMenuItem(entry.value),
+                if (!isLast)
+                  Divider(height: 1, indent: 56, color: AppColors.borderLight),
+              ],
+            );
+          }),
         ],
       ),
     );
   }
+
+  Widget _buildMenuItem(_MenuItem item) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(item.icon, size: 20, color: item.color),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItem {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _MenuItem(this.icon, this.label, this.color);
 }

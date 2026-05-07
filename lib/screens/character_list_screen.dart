@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_dimensions.dart';
-import '../constants/app_text_styles.dart';
 import '../models/character.dart';
 
-/// 角色列表屏幕
-/// 显示所有可用的AI角色
 class CharacterListScreen extends StatefulWidget {
   const CharacterListScreen({super.key});
 
@@ -14,7 +10,6 @@ class CharacterListScreen extends StatefulWidget {
 }
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
-  // 临时数据，后续会从状态管理获取
   final List<Character> _characters = [
     Character(
       id: 'ai_1',
@@ -67,73 +62,163 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-    );
-  }
-
-  /// 构建应用栏
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.surface,
-      elevation: 0,
-      title: const Text(
-        '角色列表',
-        style: AppTextStyles.h3,
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search, color: AppColors.textSecondary),
-          onPressed: () {
-            // TODO: 实现搜索功能
-          },
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(child: _buildCharacterList()),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  /// 构建主体内容
-  Widget _buildBody() {
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '角色',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_characters.length} 个角色等你探索',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border, width: 0.5),
+            ),
+            child: Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCharacterList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(AppDimensions.paddingLg),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       itemCount: _characters.length,
       itemBuilder: (context, index) {
-        final character = _characters[index];
-        return _buildCharacterCard(character);
+        return _buildCharacterCard(_characters[index], index);
       },
     );
   }
 
-  /// 构建角色卡片
-  Widget _buildCharacterCard(Character character) {
+  Widget _buildCharacterCard(Character character, int index) {
+    final gradient = AppColors.avatarGradients[index % AppColors.avatarGradients.length];
+
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.spacingMd),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
           onTap: () => _startChat(character),
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.paddingLg),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border, width: 0.5),
+            ),
             child: Row(
               children: [
-                _buildCharacterAvatar(character),
-                const SizedBox(width: AppDimensions.spacingLg),
-                Expanded(
-                  child: _buildCharacterInfo(character),
+                // 头像
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(character.avatar, style: const TextStyle(fontSize: 28)),
+                  ),
                 ),
-                _buildStartButton(character),
+                const SizedBox(width: 14),
+                // 信息
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        character.name,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        character.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          ...character.tags.map((tag) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: gradient[0].withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                tag,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: gradient[0],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          )),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // 箭头
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColors.textTertiary,
+                ),
               ],
             ),
           ),
@@ -142,100 +227,9 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
     );
   }
 
-  /// 构建角色头像
-  Widget _buildCharacterAvatar(Character character) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-      ),
-      child: Center(
-        child: Text(
-          character.avatar,
-          style: const TextStyle(fontSize: 32),
-        ),
-      ),
-    );
-  }
-
-  /// 构建角色信息
-  Widget _buildCharacterInfo(Character character) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          character.name,
-          style: AppTextStyles.labelLarge,
-        ),
-        const SizedBox(height: AppDimensions.spacingXs),
-        Text(
-          character.description,
-          style: AppTextStyles.bodySmall,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: AppDimensions.spacingSm),
-        _buildTags(character.tags),
-      ],
-    );
-  }
-
-  /// 构建标签
-  Widget _buildTags(List<String> tags) {
-    return Wrap(
-      spacing: AppDimensions.spacingSm,
-      children: tags.map((tag) {
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-          ),
-          child: Text(
-            tag,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.primary,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  /// 构建开始按钮
-  Widget _buildStartButton(Character character) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-      ),
-      child: const Text(
-        '开始',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  /// 开始聊天
   void _startChat(Character character) {
-    // TODO: 创建新的聊天会话并跳转
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('开始与${character.name}对话'),
-      ),
+      SnackBar(content: Text('开始与${character.name}对话')),
     );
   }
 }

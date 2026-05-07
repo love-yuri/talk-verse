@@ -5,8 +5,6 @@ import 'chat_list_screen.dart';
 import 'character_list_screen.dart';
 import 'profile_screen.dart';
 
-/// 主屏幕
-/// 包含底部导航栏，管理三个主要页面
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -17,11 +15,10 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  /// 页面列表
-  final List<Widget> _pages = const [
-    ChatListScreen(),
-    CharacterListScreen(),
-    ProfileScreen(),
+  static const _navItems = [
+    _NavItem(Icons.chat_bubble_outline, Icons.chat_bubble, '聊天'),
+    _NavItem(Icons.people_outline, Icons.people, '角色'),
+    _NavItem(Icons.person_outline, Icons.person, '我的'),
   ];
 
   @override
@@ -29,76 +26,85 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: const [
+          ChatListScreen(),
+          CharacterListScreen(),
+          ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
-  /// 构建底部导航栏
   Widget _buildBottomNavBar() {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
+        ),
       ),
       child: SafeArea(
         child: SizedBox(
           height: AppDimensions.bottomNavHeight,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.chat_bubble_outline, Icons.chat_bubble, '聊天'),
-              _buildNavItem(1, Icons.people_outline, Icons.people, '角色'),
-              _buildNavItem(2, Icons.person_outline, Icons.person, '我的'),
-            ],
+            children: List.generate(
+              _navItems.length,
+              (i) => Expanded(child: _buildNavItem(i, _navItems[i])),
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// 构建导航项
-  Widget _buildNavItem(int index, IconData inactiveIcon, IconData activeIcon, String label) {
+  Widget _buildNavItem(int index, _NavItem item) {
     final isActive = _currentIndex == index;
     return GestureDetector(
       onTap: () => _onItemTapped(index),
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isActive ? activeIcon : inactiveIcon,
-              size: AppDimensions.iconLg,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            decoration: BoxDecoration(
+              color: isActive ? AppColors.primarySurface : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              isActive ? item.activeIcon : item.inactiveIcon,
+              size: 22,
               color: isActive ? AppColors.primary : AppColors.textTertiary,
             ),
-            const SizedBox(height: AppDimensions.spacingXs),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? AppColors.primary : AppColors.textTertiary,
-              ),
+          ),
+          const SizedBox(height: 4),
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive ? AppColors.primary : AppColors.textTertiary,
             ),
-          ],
-        ),
+            child: Text(item.label),
+          ),
+        ],
       ),
     );
   }
 
-  /// 处理导航项点击
   void _onItemTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
   }
+}
+
+class _NavItem {
+  final IconData inactiveIcon;
+  final IconData activeIcon;
+  final String label;
+
+  const _NavItem(this.inactiveIcon, this.activeIcon, this.label);
 }

@@ -100,6 +100,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 10),
           Hero(
             tag: 'avatar_${widget.session.characterId}',
+            transitionOnUserGestures: true,
             child: Container(
               width: 38,
               height: 38,

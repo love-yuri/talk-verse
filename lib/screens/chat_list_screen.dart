@@ -134,6 +134,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             children: [
               Hero(
                 tag: 'avatar_${session.characterId}',
+                transitionOnUserGestures: true,
                 child: Container(
                   width: 50,
                   height: 50,

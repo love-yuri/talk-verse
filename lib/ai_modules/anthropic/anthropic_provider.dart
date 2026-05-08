@@ -1,7 +1,7 @@
 /*
  * @Author: love-yuri yuri2078170658@gmail.com
  * @Date: 2026-05-07 15:17:18
- * @LastEditTime: 2026-05-07 15:25:42
+ * @LastEditTime: 2026-05-08 15:23:52
  * @Description:
  */
 import 'dart:convert';
@@ -42,8 +42,7 @@ class AnthropicProvider implements AiProvider {
             ),
           )
           .toList(),
-    ).toJson()
-      ..['stream'] = stream;
+    ).toJson()..['stream'] = stream;
   }
 
   @override
@@ -82,10 +81,12 @@ class AnthropicProvider implements AiProvider {
 
     final client = http.Client();
     try {
-      final streamedResponse = await client.send(request).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => throw Exception('连接超时 (30s)'),
-      );
+      final streamedResponse = await client
+          .send(request)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('连接超时 (30s)'),
+          );
       if (streamedResponse.statusCode != 200) {
         final body = await streamedResponse.stream.bytesToString();
         throw Exception('API 请求失败: ${streamedResponse.statusCode} $body');
@@ -93,8 +94,9 @@ class AnthropicProvider implements AiProvider {
 
       // 解析 SSE 流
       String buffer = '';
-      await for (final chunk
-          in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk in streamedResponse.stream.transform(
+        utf8.decoder,
+      )) {
         buffer += chunk;
         final lines = buffer.split('\n');
         buffer = lines.removeLast();

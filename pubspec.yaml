@@ -49,6 +49,7 @@ dependencies:
 
   # HTTP 请求
   http: ^1.2.0
+  window_manager: ^0.5.1
 
 dev_dependencies:
   flutter_test:

@@ -50,9 +50,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${_getGreeting()} ✨', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                Text('${_getGreeting()} ✨', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.white70, letterSpacing: -0.08)),
                 const SizedBox(height: 2),
-                const Text('💬 对话', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+                const Text('💬 对话', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.35)),
               ],
             ),
             const Spacer(),
@@ -85,11 +85,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🌸', style: TextStyle(fontSize: 48)),
+          const Text('🌸', style: TextStyle(fontFamily: 'MapleMono', fontSize: 48)),
           const SizedBox(height: 16),
-          const Text('还没有对话', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B))),
+          const Text('还没有对话', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B), letterSpacing: -0.41)),
           const SizedBox(height: 6),
-          Text('去发现页面，找到你的第一个聊天伙伴', style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+          Text('去发现页面，找到你的第一个聊天伙伴', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.grey[400], letterSpacing: -0.08)),
         ],
       ),
     );

@@ -90,7 +90,7 @@ class _MainScreenState extends State<MainScreen> {
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
-            style: TextStyle(fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive),
+            style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? AppColors.navActive : AppColors.navInactive, letterSpacing: 0.07),
             child: Text(item.label),
           ),
         ],

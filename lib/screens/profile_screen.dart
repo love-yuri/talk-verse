@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             child: Row(
               children: [
-                const Text('✨ 我的空间', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                const Text('✨ 我的空间', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.35)),
                 const Spacer(),
                 _headerIconBtn(Icons.settings_outlined, onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
@@ -167,13 +167,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   color: Colors.white,
                 ),
                 child: const Center(
-                  child: Text('🎀', style: TextStyle(fontSize: 36)),
+                  child: Text('🎀', style: TextStyle(fontFamily: 'MapleMono', fontSize: 36)),
                 ),
               ),
             ),
             const SizedBox(height: 12),
             // 用户名
-            const Text('冒险者', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D))),
+            const Text('冒险者', style: TextStyle(fontFamily: 'MapleMono', fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D), letterSpacing: 0.35)),
             const SizedBox(height: 4),
             // 等级标签
             Container(
@@ -182,13 +182,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 gradient: const LinearGradient(colors: [Color(0xFFFFB6D9), Color(0xFFD4BBFF)]),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text('Lv.5 星见者', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: const Text('Lv.5 星见者', style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.07)),
             ),
             const SizedBox(height: 8),
             // 个性签名
             Text(
               '与AI相遇的每一天都充满惊喜 ✨',
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.grey[500], letterSpacing: -0.08),
             ),
           ],
         ),
@@ -217,9 +217,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _statItem(String emoji, String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF6B4E9B))),
+        Text(value, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B), letterSpacing: 0.35)),
         const SizedBox(height: 2),
-        Text('$emoji $label', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        Text('$emoji $label', style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: Colors.grey[500], letterSpacing: 0.07)),
       ],
     );
   }
@@ -248,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-            child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF6B4E9B))),
+            child: Text(title, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B), letterSpacing: -0.24)),
           ),
           ...items.asMap().entries.map((e) => Column(children: [
             _buildMenuItem(e.value),
@@ -281,8 +281,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D))),
-                Text(item.subtitle, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                Text(item.label, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D), letterSpacing: -0.24)),
+                Text(item.subtitle, style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: Colors.grey[400], letterSpacing: 0.07)),
               ],
             ),
           ),
@@ -300,7 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         gradient: const LinearGradient(colors: [Color(0xFFF8C8E8), Color(0xFFD4BBFF)]),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Text('TalkVerse v1.0.0 ♡', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white)),
+      child: const Text('TalkVerse v1.0.0 ♡', style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.07)),
     );
   }
 }

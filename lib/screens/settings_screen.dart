@@ -100,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          const Text('设置', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+          const Text('设置', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.41)),
         ]),
       ),
     );
@@ -222,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: const Center(
-          child: Text('保存设置', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+          child: Text('保存设置', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.41)),
         ),
       ),
     );

@@ -107,7 +107,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Colors.white.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontSize: 19))),
+              child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 19))),
             ),
           ),
           const SizedBox(width: 10),
@@ -116,11 +116,11 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               Text(
                 widget.session.characterName,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.24),
               ),
               Text(
                 _isTyping ? '正在输入...' : '在线 ♡',
-                style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.8)),
+                style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 0.07),
               ),
             ],
           ),
@@ -166,7 +166,10 @@ class _ChatScreenState extends State<ChatScreen> {
           color: const Color(0xFFE8D8F0),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(AppDateUtils.formatChatTime(t), style: AppTextStyles.chatTime.copyWith(color: const Color(0xFF9B7BB8))),
+        child: Text(
+          AppDateUtils.formatChatTime(t),
+          style: AppTextStyles.chatTime.copyWith(color: const Color(0xFF9B7BB8)),
+        ),
       ),
     );
   }

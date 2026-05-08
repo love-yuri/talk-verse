@@ -163,13 +163,13 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    Navigator.push(context, _chatRoute(session));
+    Navigator.push(context, _chatRoute(session, character));
   }
 }
 
-Route _chatRoute(ChatSession session) {
+Route _chatRoute(ChatSession session, Character character) {
   return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session),
+    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session, character: character),
     transitionDuration: const Duration(milliseconds: 350),
     reverseTransitionDuration: const Duration(milliseconds: 300),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {

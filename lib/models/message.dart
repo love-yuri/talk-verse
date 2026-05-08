@@ -63,4 +63,5 @@ enum MessageType {
   user, // 用户消息
   ai, // AI消息
   system, // 系统消息
+  typing, // 正在输入指示器
 }

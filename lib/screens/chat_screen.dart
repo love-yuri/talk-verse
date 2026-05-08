@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import '../ai_modules/ai_provider.dart';
+import '../ai_modules/anthropic/anthropic_provider.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
+import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
+import '../services/settings_service.dart';
 import '../utils/date_utils.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/warm_background.dart';
+import 'settings_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final ChatSession session;
-  const ChatScreen({super.key, required this.session});
+  final Character? character;
+  const ChatScreen({super.key, required this.session, this.character});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -19,17 +25,32 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _settingsService = SettingsService();
   final List<Message> _messages = [];
+  AiProvider? _aiProvider;
   bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
-    _messages.addAll([
-      Message(id: '1', content: widget.session.characterName == '小助手' ? '你好！我是你的智能助手，有什么可以帮你的吗？' : '你好！很高兴认识你！', type: MessageType.ai, timestamp: DateTime.now().subtract(const Duration(minutes: 5))),
-      Message(id: '2', content: '你好！', type: MessageType.user, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-      Message(id: '3', content: '很高兴见到你！今天想聊些什么呢？', type: MessageType.ai, timestamp: DateTime.now().subtract(const Duration(minutes: 3))),
-    ]);
+    _initProvider();
+    // 使用角色的问候语作为首条消息
+    final greeting = widget.character?.greeting ?? '你好！很高兴认识你！';
+    _messages.add(Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: greeting,
+      type: MessageType.ai,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  /// 加载 AI 设置并初始化 Provider
+  Future<void> _initProvider() async {
+    final settings = await _settingsService.load();
+    if (!mounted) return;
+    if (settings.isConfigured) {
+      setState(() => _aiProvider = AnthropicProvider(settings));
+    }
   }
 
   @override
@@ -154,28 +175,131 @@ class _ChatScreenState extends State<ChatScreen> {
     return ChatInput(controller: _msgCtrl, onSend: _send, onTextChanged: (_) {});
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _msgCtrl.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isTyping) return;
+
+    // 添加用户消息
     setState(() {
-      _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), content: text, type: MessageType.user, timestamp: DateTime.now()));
+      _messages.add(Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: text,
+        type: MessageType.user,
+        timestamp: DateTime.now(),
+      ));
       _msgCtrl.clear();
     });
     _scrollToBottom();
+
+    // 检查 API 是否已配置
+    if (_aiProvider == null) {
+      _showConfigDialog();
+      return;
+    }
+
     setState(() => _isTyping = true);
-    Future.delayed(const Duration(seconds: 1), () {
+
+    // 先显示打字动画，等第一个片段到达后转为 AI 消息
+    final aiMsgId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
+    setState(() {
+      _messages.add(Message(
+        id: aiMsgId,
+        content: '',
+        type: MessageType.typing,
+        timestamp: DateTime.now(),
+      ));
+    });
+    _scrollToBottom();
+
+    try {
+      final systemPrompt = _buildSystemPrompt();
+      final history = _messages
+          .where((m) => m.type == MessageType.user || m.type == MessageType.ai)
+          .toList();
+
+      bool isFirstChunk = true;
+      final buffer = StringBuffer();
+      await for (final chunk in _aiProvider!.sendMessageStream(
+        history,
+        systemPrompt: systemPrompt,
+      )) {
+        if (!mounted) return;
+        buffer.write(chunk);
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == aiMsgId);
+          if (idx != -1) {
+            _messages[idx] = Message(
+              id: aiMsgId,
+              content: buffer.toString(),
+              type: MessageType.ai,
+              timestamp: _messages[idx].timestamp,
+            );
+          }
+        });
+        if (isFirstChunk) {
+          isFirstChunk = false;
+          _scrollToBottom();
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _isTyping = false);
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add(Message(id: DateTime.now().millisecondsSinceEpoch.toString(), content: _aiReply(), type: MessageType.ai, timestamp: DateTime.now()));
+        _messages.removeWhere((m) => m.id == aiMsgId);
         _isTyping = false;
       });
+      _showError('发送失败: $e');
       _scrollToBottom();
-    });
+    }
   }
 
-  String _aiReply() {
-    const r = ['我明白了，让我想想...', '这是个好问题！', '我理解你的意思。', '让我来帮你分析一下。', '你说得对。', '这是一个有趣的角度。'];
-    return r[DateTime.now().millisecond % r.length];
+  /// 构建系统提示词
+  String? _buildSystemPrompt() {
+    final character = widget.character;
+    if (character == null) return null;
+    return '你是${character.name}。'
+        '性格特点: ${character.personality}。'
+        '角色描述: ${character.description}。'
+        '请始终保持这个角色的身份和说话风格与用户对话。';
+  }
+
+  /// 显示 API 未配置的对话框
+  void _showConfigDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('未配置 API Key'),
+        content: const Text('请先在设置中配置 API Key 才能使用 AI 对话功能。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+            },
+            child: const Text('去设置'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 显示错误提示
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _scrollToBottom() {

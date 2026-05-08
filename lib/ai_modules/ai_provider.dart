@@ -8,4 +8,7 @@ abstract class AiProvider {
   /// [messages] 对话历史消息列表
   /// [systemPrompt] 系统提示词（可选）
   Future<String> sendMessage(List<Message> messages, {String? systemPrompt});
+
+  /// 流式发送消息，逐段返回 AI 回复文本片段
+  Stream<String> sendMessageStream(List<Message> messages, {String? systemPrompt});
 }

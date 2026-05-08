@@ -9,8 +9,8 @@ class AnthropicContent {
 
   factory AnthropicContent.fromJson(Map<String, dynamic> json) {
     return AnthropicContent(
-      type: json['type'] as String,
-      text: json['text'] as String,
+      type: json['type']?.toString() ?? '',
+      text: json['text']?.toString() ?? '',
     );
   }
 
@@ -84,14 +84,14 @@ class AnthropicResponse {
 
   factory AnthropicResponse.fromJson(Map<String, dynamic> json) {
     return AnthropicResponse(
-      id: json['id'] as String,
-      type: json['type'] as String,
-      role: json['role'] as String,
+      id: json['id']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
       content: (json['content'] as List)
           .map((e) => AnthropicContent.fromJson(e as Map<String, dynamic>))
           .toList(),
-      model: json['model'] as String,
-      stopReason: json['stop_reason'] as String? ?? '',
+      model: json['model']?.toString() ?? '',
+      stopReason: json['stop_reason']?.toString() ?? '',
     );
   }
 

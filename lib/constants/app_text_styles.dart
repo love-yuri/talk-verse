@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
+/// 苹果 SF Pro 设计规范的文本样式
+/// 使用 MapleMono 字体，统一粗细层次
 class AppTextStyles {
-  static const TextStyle h1 = TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary, letterSpacing: -0.5);
-  static const TextStyle h2 = TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary, letterSpacing: -0.3);
-  static const TextStyle h3 = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
+  static const String _fontFamily = 'MapleMono';
 
-  static const TextStyle body = TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary, height: 1.45);
-  static const TextStyle bodySmall = TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary, height: 1.3);
+  // ── 标题 ──
+  static const TextStyle h1 = TextStyle(fontFamily: _fontFamily, fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35, height: 1.27);
+  static const TextStyle h2 = TextStyle(fontFamily: _fontFamily, fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: -0.41, height: 1.29);
+  static const TextStyle h3 = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: -0.24, height: 1.33);
 
-  static const TextStyle label = TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
-  static const TextStyle labelSmall = TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
+  // ── 正文 ──
+  static const TextStyle body = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary, letterSpacing: -0.24, height: 1.33);
+  static const TextStyle bodySmall = TextStyle(fontFamily: _fontFamily, fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: -0.08, height: 1.38);
 
-  static const TextStyle greeting = TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary);
+  // ── 标签 ──
+  static const TextStyle label = TextStyle(fontFamily: _fontFamily, fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: -0.08);
+  static const TextStyle labelSmall = TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary, letterSpacing: 0.07);
 
-  static const TextStyle chatMessage = TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.bubbleAIText, height: 1.45);
-  static const TextStyle chatMessageUser = TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.bubbleUserText, height: 1.45);
-  static const TextStyle chatTime = TextStyle(fontSize: 10, fontWeight: FontWeight.w400, color: AppColors.textTertiary);
+  // ── 问候语 ──
+  static const TextStyle greeting = TextStyle(fontFamily: _fontFamily, fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: -0.08);
 
-  static const TextStyle input = TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary);
-  static const TextStyle inputHint = TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textTertiary);
+  // ── 聊天消息 ──
+  static const TextStyle chatMessage = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.bubbleAIText, letterSpacing: -0.24, height: 1.33);
+  static const TextStyle chatMessageUser = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.bubbleUserText, letterSpacing: -0.24, height: 1.33);
+  static const TextStyle chatTime = TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textTertiary, letterSpacing: 0.07);
+
+  // ── 输入框 ──
+  static const TextStyle input = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textPrimary, letterSpacing: -0.24, height: 1.33);
+  static const TextStyle inputHint = TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textTertiary, letterSpacing: -0.24, height: 1.33);
 }

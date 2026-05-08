@@ -46,18 +46,30 @@ class TalkVerseApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: 'MapleMono',
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.accent,
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: AppColors.background,
+        textTheme: const TextTheme(
+          headlineLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: 0.35, height: 1.27),
+          headlineMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.41, height: 1.29),
+          titleMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.24, height: 1.33),
+          bodyLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.24, height: 1.33),
+          bodyMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, letterSpacing: -0.08, height: 1.38),
+          labelLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.08),
+          labelSmall: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.07),
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.surface,
           elevation: 0,
           titleTextStyle: TextStyle(
+            fontFamily: 'MapleMono',
             color: AppColors.textPrimary,
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w600,
+            letterSpacing: -0.41,
           ),
           iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),

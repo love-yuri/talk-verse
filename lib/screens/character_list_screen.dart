@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/character.dart';
 import '../models/chat_session.dart';
+import '../services/chat_storage_service.dart';
 import '../widgets/warm_background.dart';
 import 'chat_screen.dart';
 
@@ -14,11 +16,11 @@ class CharacterListScreen extends StatefulWidget {
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
   final List<Character> _characters = [
-    Character(id: 'ai_1', name: '小助手', avatar: '🤖', description: '你的智能AI助手，随时为你解答问题', personality: '友好、专业、耐心', greeting: '你好！有什么可以帮你的吗？', tags: ['助手', '问答']),
-    Character(id: 'ai_2', name: '诗人', avatar: '📝', description: '一位才华横溢的诗人，能为你创作优美的诗句', personality: '浪漫、文艺', greeting: '月光如水，诗意盎然。', tags: ['创作', '诗歌']),
-    Character(id: 'ai_3', name: '朋友', avatar: '😊', description: '一个温暖的朋友，陪你聊天解闷', personality: '开朗、幽默', greeting: '嘿！好久不见！', tags: ['聊天', '陪伴']),
-    Character(id: 'ai_4', name: '老师', avatar: '👨‍🏫', description: '一位知识渊博的老师，帮你解答学习问题', personality: '严谨、耐心', greeting: '同学们好！', tags: ['教育', '学习']),
-    Character(id: 'ai_5', name: '健身教练', avatar: '💪', description: '专业的健身教练，为你制定训练计划', personality: '积极、鼓励', greeting: '准备好开始训练了吗？', tags: ['健身', '健康']),
+    Character(id: 'ai_1', name: '小助手', avatar: 'assets/images/default_avatar.png', description: '你的智能AI助手，随时为你解答问题', personality: '友好、专业、耐心', greeting: '你好！有什么可以帮你的吗？', tags: ['助手', '问答']),
+    Character(id: 'ai_2', name: '诗人', avatar: 'assets/images/default_avatar.png', description: '一位才华横溢的诗人，能为你创作优美的诗句', personality: '浪漫、文艺', greeting: '月光如水，诗意盎然。', tags: ['创作', '诗歌']),
+    Character(id: 'ai_3', name: '朋友', avatar: 'assets/images/default_avatar.png', description: '一个温暖的朋友，陪你聊天解闷', personality: '开朗、幽默', greeting: '嘿！好久不见！', tags: ['聊天', '陪伴']),
+    Character(id: 'ai_4', name: '老师', avatar: 'assets/images/default_avatar.png', description: '一位知识渊博的老师，帮你解答学习问题', personality: '严谨、耐心', greeting: '同学们好！', tags: ['教育', '学习']),
+    Character(id: 'ai_5', name: '健身教练', avatar: 'assets/images/default_avatar.png', description: '专业的健身教练，为你制定训练计划', personality: '积极、鼓励', greeting: '准备好开始训练了吗？', tags: ['健身', '健康']),
   ];
 
   @override
@@ -35,46 +37,31 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFB4D0F8), Color(0xFFD4BBFF), Color(0xFFB8F0D8)],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        child: Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: const Border(bottom: BorderSide(color: Color(0x1A000000), width: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+            child: Row(
               children: [
-                Text('${_characters.length} 个角色可选 🌟', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.white70, letterSpacing: -0.08)),
-                const SizedBox(height: 2),
-                const Text('✨ 发现', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.35)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${_characters.length} 个角色可选', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: -0.08)),
+                    const SizedBox(height: 2),
+                    const Text('发现', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35)),
+                  ],
+                ),
               ],
             ),
-            const Spacer(),
-            _headerIconBtn(Icons.search_rounded),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _headerIconBtn(IconData icon) {
-    return TapScale(
-      onTap: () {},
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 18, color: Colors.white),
       ),
     );
   }
@@ -112,18 +99,24 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
           children: [
             Hero(
               tag: 'avatar_${character.id}',
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(29),
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    character.avatar,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 32, color: Colors.grey),
+                  ),
                 ),
-                child: Center(child: Text(character.avatar, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 28))),
               ),
             ),
             const SizedBox(height: 10),
@@ -163,6 +156,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
+    ChatStorageService().saveSession(session);
     Navigator.push(context, _chatRoute(session, character));
   }
 }

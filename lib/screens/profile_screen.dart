@@ -1,6 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../widgets/warm_background.dart';
-import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,20 +10,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _sparkleCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _sparkleCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
-  }
-
-  @override
-  void dispose() {
-    _sparkleCtrl.dispose();
-    super.dispose();
-  }
+class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
@@ -57,83 +45,33 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  /// 渐变头部区域
+  /// 毛玻璃头部区域
   Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE8B4F8), Color(0xFFB4D0F8), Color(0xFFF8C8E8)],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // 装饰性闪烁星星
-          ..._buildSparkles(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: const Border(bottom: BorderSide(color: Color(0x1A000000), width: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
             child: Row(
               children: [
-                const Text('✨ 我的空间', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.35)),
-                const Spacer(),
-                _headerIconBtn(Icons.settings_outlined, onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-                }),
+                const Text('我的', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35)),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildSparkles() {
-    final positions = [
-      const Offset(30, 20),
-      const Offset(120, 35),
-      const Offset(250, 15),
-      const Offset(320, 40),
-      const Offset(80, 50),
-    ];
-    return positions.map((pos) => Positioned(
-      left: pos.dx,
-      top: pos.dy,
-      child: AnimatedBuilder(
-        animation: _sparkleCtrl,
-        builder: (_, anim) {
-          final v = (_sparkleCtrl.value + pos.dx / 400) % 1.0;
-          final opacity = (v < 0.5 ? v * 2 : (1 - v) * 2).clamp(0.0, 1.0);
-          return Opacity(
-            opacity: opacity * 0.7,
-            child: const Text('✦', style: TextStyle(fontSize: 12, color: Colors.white)),
-          );
-        },
-      ),
-    )).toList();
-  }
-
-  Widget _headerIconBtn(IconData icon, {VoidCallback? onTap}) {
-    return TapScale(
-      onTap: onTap ?? () {},
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 18, color: Colors.white),
       ),
     );
   }
 
   /// 个人资料卡片
   Widget _buildProfileCard() {
-    return Transform.translate(
-      offset: const Offset(0, -20),
-      child: Container(
+    return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -192,8 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   /// 数据统计行

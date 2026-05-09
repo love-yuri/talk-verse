@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 import '../models/chat_session.dart';
+import '../services/chat_storage_service.dart';
 import '../utils/date_utils.dart';
 import '../widgets/warm_background.dart';
 import 'chat_screen.dart';
@@ -14,11 +16,19 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  final List<ChatSession> _sessions = [
-    ChatSession(id: '1', characterId: 'ai_1', characterName: '小助手', characterAvatar: '🤖', messages: [], createdAt: DateTime.now().subtract(const Duration(hours: 2)), updatedAt: DateTime.now().subtract(const Duration(minutes: 5))),
-    ChatSession(id: '2', characterId: 'ai_2', characterName: '诗人', characterAvatar: '📝', messages: [], createdAt: DateTime.now().subtract(const Duration(days: 1)), updatedAt: DateTime.now().subtract(const Duration(hours: 3))),
-    ChatSession(id: '3', characterId: 'ai_3', characterName: '朋友', characterAvatar: '😊', messages: [], createdAt: DateTime.now().subtract(const Duration(days: 3)), updatedAt: DateTime.now().subtract(const Duration(days: 1))),
-  ];
+  final _storage = ChatStorageService();
+  List<ChatSession> _sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    final sessions = await _storage.load();
+    if (mounted) setState(() => _sessions = sessions);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,48 +44,31 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE8B4F8), Color(0xFFB4D0F8), Color(0xFFF8C8E8)],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        child: Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            border: const Border(bottom: BorderSide(color: Color(0x1A000000), width: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+            child: Row(
               children: [
-                Text('${_getGreeting()} ✨', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.white70, letterSpacing: -0.08)),
-                const SizedBox(height: 2),
-                const Text('💬 对话', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.35)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_getGreeting(), style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: -0.08)),
+                    const SizedBox(height: 2),
+                    const Text('对话', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35)),
+                  ],
+                ),
               ],
             ),
-            const Spacer(),
-            _headerIconBtn(Icons.search_rounded),
-            const SizedBox(width: 8),
-            _headerIconBtn(Icons.edit_square),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _headerIconBtn(IconData icon) {
-    return TapScale(
-      onTap: () {},
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 18, color: Colors.white),
       ),
     );
   }
@@ -135,18 +128,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
               Hero(
                 tag: 'avatar_${session.characterId}',
                 transitionOnUserGestures: true,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(25),
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [color.withValues(alpha: 0.3), color.withValues(alpha: 0.1)],
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    child: Image.asset(
+                      session.characterAvatar,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 26, color: Colors.grey),
+                    ),
                   ),
-                  child: Center(child: Text(session.characterAvatar, style: const TextStyle(fontSize: 24))),
                 ),
               ),
               const SizedBox(width: 12),
@@ -194,14 +193,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   void _deleteSession(ChatSession session) {
     setState(() => _sessions.remove(session));
+    _storage.deleteSession(session.id);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('已删除与${session.characterName}的对话'),
-      action: SnackBarAction(label: '撤销', onPressed: () => setState(() => _sessions.add(session))),
+      action: SnackBarAction(label: '撤销', onPressed: () {
+        setState(() => _sessions.add(session));
+        _storage.saveSession(session);
+      }),
     ));
   }
 
-  void _openChat(ChatSession session) {
-    Navigator.push(context, _chatRoute(session));
+  Future<void> _openChat(ChatSession session) async {
+    await Navigator.push(context, _chatRoute(session));
+    _loadSessions();
   }
 }
 

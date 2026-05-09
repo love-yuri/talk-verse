@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import 'chat_list_screen.dart';
@@ -51,17 +52,20 @@ class _MainScreenState extends State<MainScreen> {
           ProfileScreen(),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, -2)),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 56,
-            child: Row(children: List.generate(_items.length, (i) => Expanded(child: _navItem(i, _items[i])))),
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.72),
+              border: const Border(top: BorderSide(color: Color(0x1A000000), width: 0.5)),
+            ),
+            child: SafeArea(
+              child: SizedBox(
+                height: 56,
+                child: Row(children: List.generate(_items.length, (i) => Expanded(child: _navItem(i, _items[i])))),
+              ),
+            ),
           ),
         ),
       ),

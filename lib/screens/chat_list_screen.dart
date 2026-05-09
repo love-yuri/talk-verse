@@ -1,10 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 import '../models/chat_session.dart';
 import '../services/chat_storage_service.dart';
 import '../utils/date_utils.dart';
+import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
 import 'chat_screen.dart';
 
@@ -44,32 +44,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildHeader() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            border: const Border(bottom: BorderSide(color: Color(0x1A000000), width: 0.5)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_getGreeting(), style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: -0.08)),
-                    const SizedBox(height: 2),
-                    const Text('对话', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return GlassHeader(
+      subtitle: _getGreeting(),
+      title: '对话',
+      badge: '${_sessions.length}',
+      actions: [
+        GlassHeader.iconBtn(Icons.search_rounded, onTap: () {}),
+        const SizedBox(width: 8),
+        GlassHeader.iconBtn(Icons.edit_square, onTap: () {}),
+      ],
     );
   }
 

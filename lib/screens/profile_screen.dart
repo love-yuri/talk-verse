@@ -1,6 +1,5 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
+import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -47,25 +46,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// 毛玻璃头部区域
   Widget _buildHeader() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            border: const Border(bottom: BorderSide(color: Color(0x1A000000), width: 0.5)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-            child: Row(
-              children: [
-                const Text('我的', style: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: 0.35)),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return GlassHeader(
+      subtitle: '个人中心',
+      title: '我的',
+      actions: [
+        GlassHeader.iconBtn(Icons.settings_outlined, onTap: () {}),
+      ],
     );
   }
 

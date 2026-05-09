@@ -6,6 +6,7 @@ import '../constants/app_text_styles.dart';
 import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
+import '../services/chat_storage_service.dart';
 import '../services/settings_service.dart';
 import '../utils/date_utils.dart';
 import '../widgets/chat_bubble.dart';
@@ -26,22 +27,30 @@ class _ChatScreenState extends State<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _settingsService = SettingsService();
+  final _chatStorage = ChatStorageService();
   final List<Message> _messages = [];
   AiProvider? _aiProvider;
   bool _isTyping = false;
+  String? _activeMenuMsgId;
 
   @override
   void initState() {
     super.initState();
     _initProvider();
-    // 使用角色的问候语作为首条消息
-    final greeting = widget.character?.greeting ?? '你好！很高兴认识你！';
-    _messages.add(Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: greeting,
-      type: MessageType.ai,
-      timestamp: DateTime.now(),
-    ));
+    if (widget.session.messages.isNotEmpty) {
+      // 从存储加载的历史消息
+      _messages.addAll(widget.session.messages);
+    } else {
+      // 新会话，使用角色的问候语作为首条消息
+      final greeting = widget.character?.greeting ?? '你好！很高兴认识你！';
+      _messages.add(Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: greeting,
+        type: MessageType.ai,
+        timestamp: DateTime.now(),
+      ));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _persistMessages());
+    }
   }
 
   /// 加载 AI 设置并初始化 Provider
@@ -101,14 +110,20 @@ class _ChatScreenState extends State<ChatScreen> {
           Hero(
             tag: 'avatar_${widget.session.characterId}',
             transitionOnUserGestures: true,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(10),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(19),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+                child: Image.asset(
+                  widget.session.characterAvatar,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 20, color: Colors.white70),
+                ),
               ),
-              child: Center(child: Text(widget.session.characterAvatar, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 19))),
             ),
           ),
           const SizedBox(width: 10),
@@ -144,17 +159,37 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessages() {
-    return ListView.builder(
+    return RawScrollbar(
+      controller: _scrollCtrl,
+      thumbVisibility: true,
+      thickness: 3,
+      radius: const Radius.circular(2),
+      thumbColor: AppColors.accent.withValues(alpha: 0.25),
+      trackVisibility: false,
+      child: ListView.builder(
       controller: _scrollCtrl,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       itemCount: _messages.length,
       itemBuilder: (context, i) {
-        final showTime = i == 0 || _messages[i].timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
+        final msg = _messages[i];
+        final showTime = i == 0 || msg.timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
+        final isLast = i == _messages.length - 1;
+        final isFailed = msg.status == MessageStatus.failed;
         return Column(children: [
-          if (showTime) _timeDivider(_messages[i].timestamp),
-          ChatBubble(message: _messages[i], characterAvatar: widget.session.characterAvatar, characterName: widget.session.characterName),
+          if (showTime) _timeDivider(msg.timestamp),
+          ChatBubble(
+            message: msg,
+            characterAvatar: widget.session.characterAvatar,
+            characterName: widget.session.characterName,
+            isLast: isLast,
+            isMenuActive: _activeMenuMsgId == msg.id,
+            onLongPress: () => setState(() => _activeMenuMsgId = msg.id),
+            onEditConfirm: (newContent) => _updateMessage(i, newContent),
+            onResend: isFailed ? () => _resendMessage(i) : null,
+          ),
         ]);
       },
+    ),
     );
   }
 
@@ -183,13 +218,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty || _isTyping) return;
 
-    // 添加用户消息
+    // 添加用户消息（sending 状态）
+    final userMsgId = DateTime.now().millisecondsSinceEpoch.toString();
     setState(() {
       _messages.add(Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: userMsgId,
         content: text,
         type: MessageType.user,
         timestamp: DateTime.now(),
+        status: MessageStatus.sending,
       ));
       _msgCtrl.clear();
     });
@@ -197,9 +234,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // 检查 API 是否已配置
     if (_aiProvider == null) {
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == userMsgId);
+        if (idx != -1) {
+          _messages[idx] = _messages[idx].copyWith(status: MessageStatus.failed);
+        }
+      });
+      _persistMessages();
       _showConfigDialog();
       return;
     }
+
+    // 标记为已发送
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == userMsgId);
+      if (idx != -1) {
+        _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+      }
+    });
 
     setState(() => _isTyping = true);
 
@@ -248,14 +300,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (!mounted) return;
       setState(() => _isTyping = false);
+      _persistMessages();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _messages.removeWhere((m) => m.id == aiMsgId);
+        // 将用户消息标记为失败
+        final lastUserIdx = _messages.lastIndexWhere(
+          (m) => m.type == MessageType.user && m.id == userMsgId,
+        );
+        if (lastUserIdx != -1) {
+          _messages[lastUserIdx] = _messages[lastUserIdx].copyWith(
+            status: MessageStatus.failed,
+          );
+        }
         _isTyping = false;
       });
-      _showError('发送失败: $e');
       _scrollToBottom();
+      _persistMessages();
     }
   }
 
@@ -294,21 +356,36 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  /// 显示错误提示
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   void _scrollToBottom() {
     if (_scrollCtrl.hasClients) {
       _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
+  }
+
+  /// 更新消息内容（原地编辑）
+  void _updateMessage(int index, String newContent) {
+    setState(() {
+      _messages[index] = _messages[index].copyWith(content: newContent);
+    });
+    _persistMessages();
+  }
+
+  /// 持久化当前消息列表到本地存储
+  Future<void> _persistMessages() async {
+    final updated = widget.session.copyWith(
+      messages: List.from(_messages),
+      updatedAt: DateTime.now(),
+    );
+    await _chatStorage.saveSession(updated);
+  }
+
+  /// 重发消息：删除失败消息，用原内容重新发送
+  void _resendMessage(int index) {
+    final msg = _messages[index];
+    setState(() {
+      _messages.removeAt(index);
+    });
+    _msgCtrl.text = msg.content;
+    _send();
   }
 }

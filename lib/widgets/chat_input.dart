@@ -48,25 +48,13 @@ class _ChatInputState extends State<ChatInput> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _iconBtn(Icons.mic_none_rounded),
-          const SizedBox(width: 8),
           Expanded(child: _inputField()),
           const SizedBox(width: 8),
-          _iconBtn(Icons.emoji_emotions_outlined),
-          const SizedBox(width: 8),
-          if (_hasText) _sendBtn() else _iconBtn(Icons.add_circle_outline_rounded),
+          Opacity(
+            opacity: _hasText ? 1.0 : 0.4,
+            child: _sendBtn(),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _iconBtn(IconData icon) {
-    return TapScale(
-      onTap: () {},
-      child: SizedBox(
-        width: 36,
-        height: 36,
-        child: Icon(icon, size: 24, color: const Color(0xFF9B7BB8)),
       ),
     );
   }
@@ -95,7 +83,7 @@ class _ChatInputState extends State<ChatInput> {
 
   Widget _sendBtn() {
     return TapScale(
-      onTap: widget.onSend,
+      onTap: _hasText ? widget.onSend : null,
       child: Container(
         width: 38,
         height: 38,

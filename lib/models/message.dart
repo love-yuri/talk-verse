@@ -6,6 +6,7 @@ class Message {
   final MessageType type;
   final DateTime timestamp;
   final bool isRead;
+  final MessageStatus status;
 
   Message({
     required this.id,
@@ -13,6 +14,7 @@ class Message {
     required this.type,
     required this.timestamp,
     this.isRead = false,
+    this.status = MessageStatus.sent,
   });
 
   /// 从JSON创建消息对象
@@ -26,6 +28,10 @@ class Message {
       ),
       timestamp: DateTime.parse(json['timestamp'] as String),
       isRead: json['isRead'] as bool? ?? false,
+      status: MessageStatus.values.firstWhere(
+        (e) => e.name == json['status'],
+        orElse: () => MessageStatus.sent,
+      ),
     );
   }
 
@@ -37,6 +43,7 @@ class Message {
       'type': type.name,
       'timestamp': timestamp.toIso8601String(),
       'isRead': isRead,
+      'status': status.name,
     };
   }
 
@@ -47,6 +54,7 @@ class Message {
     MessageType? type,
     DateTime? timestamp,
     bool? isRead,
+    MessageStatus? status,
   }) {
     return Message(
       id: id ?? this.id,
@@ -54,6 +62,7 @@ class Message {
       type: type ?? this.type,
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
+      status: status ?? this.status,
     );
   }
 }
@@ -64,4 +73,11 @@ enum MessageType {
   ai, // AI消息
   system, // 系统消息
   typing, // 正在输入指示器
+}
+
+/// 消息发送状态枚举
+enum MessageStatus {
+  sending, // 发送中
+  sent, // 已发送成功
+  failed, // 发送失败
 }

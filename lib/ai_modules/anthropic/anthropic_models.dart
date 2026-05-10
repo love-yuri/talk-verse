@@ -45,12 +45,16 @@ class AnthropicRequest {
   final int maxTokens;
   final List<AnthropicMessage> messages;
   final String? system;
+  final bool thinkingEnabled;
+  final int thinkingBudgetTokens;
 
   AnthropicRequest({
     required this.model,
     this.maxTokens = 1024,
     required this.messages,
     this.system,
+    this.thinkingEnabled = false,
+    this.thinkingBudgetTokens = 4000,
   });
 
   Map<String, dynamic> toJson() {
@@ -60,6 +64,12 @@ class AnthropicRequest {
       'messages': messages.map((e) => e.toJson()).toList(),
     };
     if (system != null) json['system'] = system;
+    if (thinkingEnabled) {
+      json['thinking'] = {
+        'type': 'enabled',
+        'budget_tokens': thinkingBudgetTokens,
+      };
+    }
     return json;
   }
 }

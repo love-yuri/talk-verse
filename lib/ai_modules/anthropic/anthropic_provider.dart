@@ -14,8 +14,15 @@ import 'anthropic_models.dart';
 /// Anthropic API 实现
 class AnthropicProvider implements AiProvider {
   final AiSettings settings;
+  http.Client? _activeClient;
 
   AnthropicProvider(this.settings);
+
+  @override
+  void cancel() {
+    _activeClient?.close();
+    _activeClient = null;
+  }
 
   /// 构建请求头
   Map<String, String> get _headers => {
@@ -32,7 +39,9 @@ class AnthropicProvider implements AiProvider {
   }) {
     return AnthropicRequest(
       model: settings.model,
-      maxTokens: 1024,
+      maxTokens: settings.reasoningEnabled ? 8192 : 1024,
+      thinkingEnabled: settings.reasoningEnabled,
+      thinkingBudgetTokens: settings.reasoningBudgetTokens,
       system: systemPrompt,
       messages: messages
           .map(
@@ -80,6 +89,7 @@ class AnthropicProvider implements AiProvider {
     );
 
     final client = http.Client();
+    _activeClient = client;
     try {
       final streamedResponse = await client
           .send(request)
@@ -92,11 +102,12 @@ class AnthropicProvider implements AiProvider {
         throw Exception('API 请求失败: ${streamedResponse.statusCode} $body');
       }
 
-      // 解析 SSE 流
+      // 解析 SSE 流，每 30 秒无数据则超时
       String buffer = '';
-      await for (final chunk in streamedResponse.stream.transform(
-        utf8.decoder,
-      )) {
+      final stream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .timeout(const Duration(seconds: 30));
+      await for (final chunk in stream) {
         buffer += chunk;
         final lines = buffer.split('\n');
         buffer = lines.removeLast();
@@ -125,6 +136,7 @@ class AnthropicProvider implements AiProvider {
         }
       }
     } finally {
+      _activeClient = null;
       client.close();
     }
   }

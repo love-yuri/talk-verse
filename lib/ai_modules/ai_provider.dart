@@ -11,4 +11,7 @@ abstract class AiProvider {
 
   /// 流式发送消息，逐段返回 AI 回复文本片段
   Stream<String> sendMessageStream(List<Message> messages, {String? systemPrompt});
+
+  /// 取消当前正在进行的请求
+  void cancel();
 }

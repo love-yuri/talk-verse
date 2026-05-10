@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
 import 'settings_screen.dart';
+import 'token_usage_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,8 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             const SizedBox(height: 14),
             _buildMenuSection('更多功能', [
+              _MenuItem(Icons.data_usage_rounded, 'Token 用量', '查看API请求消耗明细', const Color(0xFF8B6FC0), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TokenUsageScreen()))),
               _MenuItem(Icons.palette_rounded, '主题装扮', '个性化你的空间', const Color(0xFF4D96FF)),
-              _MenuItem(Icons.diamond_rounded, '会员中心', '解锁专属特权', const Color(0xFF9B59B6)),
               _MenuItem(Icons.settings_rounded, '设置', '偏好与账号管理', const Color(0xFF95A5A6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
             ]),
             const SizedBox(height: 14),

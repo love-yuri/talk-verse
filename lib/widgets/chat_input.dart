@@ -44,7 +44,7 @@ class _ChatInputState extends State<ChatInput> {
           BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, -4)),
         ],
       ),
-      padding: EdgeInsets.only(left: 12, right: 12, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
+      padding: EdgeInsets.only(left: 10, right: 10, top: 6, bottom: MediaQuery.of(context).padding.bottom + 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -85,12 +85,12 @@ class _ChatInputState extends State<ChatInput> {
           hintText: '输入消息... ♡',
           hintStyle: AppTextStyles.inputHint.copyWith(color: const Color(0xFFC4B0D9)),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          suffix: Transform.translate(
-            offset: const Offset(0, 0),
-            child: TapScale(
-              onTap: _insertParen,
-              child: Text('()', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: const Color(0xFFC4B0D9).withValues(alpha: 0.7))),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          suffix: TapScale(
+            onTap: _insertParen,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 16, color: Color(0xFFC4B0D9))),
             ),
           ),
         ),

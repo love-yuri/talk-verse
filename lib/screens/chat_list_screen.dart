@@ -109,7 +109,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           child: Row(
             children: [
               Hero(
-                tag: 'avatar_${session.characterId}',
+                tag: 'avatar_${session.id}',
                 transitionOnUserGestures: true,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(25),
@@ -194,7 +194,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
 Route _chatRoute(ChatSession session) {
   return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session),
+    pageBuilder: (context, animation, secondaryAnimation) => ChatScreen(session: session, heroTag: 'avatar_${session.id}'),
     transitionDuration: const Duration(milliseconds: 350),
     reverseTransitionDuration: const Duration(milliseconds: 300),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {

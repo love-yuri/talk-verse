@@ -8,6 +8,8 @@ class Character {
   final String personality;
   final String greeting;
   final List<String> tags;
+  final String myNickname;
+  final String aiNickname;
 
   Character({
     required this.id,
@@ -17,6 +19,8 @@ class Character {
     required this.personality,
     required this.greeting,
     this.tags = const [],
+    this.myNickname = '冒险者',
+    this.aiNickname = '',
   });
 
   /// 从JSON创建角色对象
@@ -29,6 +33,8 @@ class Character {
       personality: json['personality'] as String,
       greeting: json['greeting'] as String,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      myNickname: json['myNickname'] as String? ?? '冒险者',
+      aiNickname: json['aiNickname'] as String? ?? '',
     );
   }
 
@@ -42,6 +48,8 @@ class Character {
       'personality': personality,
       'greeting': greeting,
       'tags': tags,
+      'myNickname': myNickname,
+      'aiNickname': aiNickname,
     };
   }
 
@@ -54,6 +62,8 @@ class Character {
     String? personality,
     String? greeting,
     List<String>? tags,
+    String? myNickname,
+    String? aiNickname,
   }) {
     return Character(
       id: id ?? this.id,
@@ -63,6 +73,8 @@ class Character {
       personality: personality ?? this.personality,
       greeting: greeting ?? this.greeting,
       tags: tags ?? this.tags,
+      myNickname: myNickname ?? this.myNickname,
+      aiNickname: aiNickname ?? this.aiNickname,
     );
   }
 }

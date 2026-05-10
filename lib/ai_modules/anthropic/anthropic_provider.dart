@@ -15,8 +15,15 @@ import 'anthropic_models.dart';
 class AnthropicProvider implements AiProvider {
   final AiSettings settings;
   http.Client? _activeClient;
+  TokenUsage? _lastUsage;
 
   AnthropicProvider(this.settings);
+
+  @override
+  TokenUsage? get lastUsage => _lastUsage;
+
+  @override
+  String get model => settings.model;
 
   @override
   void cancel() {
@@ -104,6 +111,10 @@ class AnthropicProvider implements AiProvider {
 
       // 解析 SSE 流，每 30 秒无数据则超时
       String buffer = '';
+      int inputTokens = 0;
+      int cacheRead = 0;
+      int cacheCreate = 0;
+      int outputTokens = 0;
       final stream = streamedResponse.stream
           .transform(utf8.decoder)
           .timeout(const Duration(seconds: 30));
@@ -122,7 +133,25 @@ class AnthropicProvider implements AiProvider {
             final json = jsonDecode(data) as Map<String, dynamic>;
             final type = json['type'] as String?;
 
-            if (type == 'content_block_delta') {
+            if (type == 'message_start') {
+              final usage = json['message']?['usage'] as Map<String, dynamic>?;
+              if (usage != null) {
+                inputTokens = (usage['input_tokens'] as num?)?.toInt() ?? 0;
+                cacheRead = (usage['cache_read_input_tokens'] as num?)?.toInt() ?? 0;
+                cacheCreate = (usage['cache_creation_input_tokens'] as num?)?.toInt() ?? 0;
+              }
+            } else if (type == 'message_delta') {
+              final usage = json['usage'] as Map<String, dynamic>?;
+              if (usage != null) {
+                outputTokens = (usage['output_tokens'] as num?)?.toInt() ?? 0;
+              }
+              _lastUsage = TokenUsage(
+                inputTokens: inputTokens,
+                cacheReadTokens: cacheRead,
+                cacheCreateTokens: cacheCreate,
+                outputTokens: outputTokens,
+              );
+            } else if (type == 'content_block_delta') {
               final delta = json['delta'] as Map<String, dynamic>?;
               final deltaType = delta?['type'] as String?;
               if (deltaType == 'text_delta') {

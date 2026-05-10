@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/ai_settings.dart';
 import '../models/character.dart';
+import '../models/message.dart';
+import '../services/token_usage_service.dart';
 import '../widgets/warm_background.dart';
 
 class ChatSettingsScreen extends StatefulWidget {
@@ -12,6 +14,9 @@ class ChatSettingsScreen extends StatefulWidget {
   final Character? character;
   final int characterIndex;
   final VoidCallback? onEditCharacter;
+  final List<Message> messages;
+  final String? systemPrompt;
+  final String? sessionId;
 
   const ChatSettingsScreen({
     super.key,
@@ -22,6 +27,9 @@ class ChatSettingsScreen extends StatefulWidget {
     this.character,
     this.characterIndex = 0,
     this.onEditCharacter,
+    this.messages = const [],
+    this.systemPrompt,
+    this.sessionId,
   });
 
   @override
@@ -30,11 +38,23 @@ class ChatSettingsScreen extends StatefulWidget {
 
 class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
   late int _selectedIndex;
+  int _sessionTotalTokens = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.aiSettings.activeConfigIndex;
+    _loadSessionTokens();
+  }
+
+  Future<void> _loadSessionTokens() async {
+    if (widget.sessionId == null) return;
+    final records = await TokenUsageService().load();
+    final sessionRecords = records.where((r) => r.sessionId == widget.sessionId);
+    if (!mounted) return;
+    setState(() {
+      _sessionTotalTokens = sessionRecords.fold<int>(0, (sum, r) => sum + r.totalTokens);
+    });
   }
 
   @override
@@ -64,6 +84,8 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                 ),
                 const SizedBox(height: 10),
                 _buildCurrentConfigInfo(configs[_selectedIndex]),
+                const SizedBox(height: 28),
+                _buildSessionInfo(),
                 const SizedBox(height: 28),
                 _buildSectionTitle('操作'),
                 const SizedBox(height: 12),
@@ -199,6 +221,49 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 40, child: Text(label, style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Colors.grey[500]))),
+        Expanded(child: Text(value, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Color(0xFF2D2D2D)))),
+      ],
+    );
+  }
+
+  static int _estimateTokens(String text) => (text.length / 2).ceil();
+
+  Widget _buildSessionInfo() {
+    final realMessages = widget.messages.where((m) => m.type == MessageType.user || m.type == MessageType.ai).toList();
+    final totalCount = realMessages.length;
+
+    // 单轮请求预估输入：system prompt + 所有历史消息内容
+    final allContent = realMessages.fold<String>('', (s, m) => '$s${m.content}');
+    final promptText = widget.systemPrompt ?? '';
+    final estimatedInput = _estimateTokens('$promptText$allContent');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('会话信息', style: TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B))),
+          const SizedBox(height: 12),
+          _sessionInfoRow('总对话数', '$totalCount 条'),
+          const SizedBox(height: 6),
+          _sessionInfoRow('单轮预估', '输入 ~$estimatedInput tokens'),
+          const SizedBox(height: 6),
+          _sessionInfoRow('累计已用', '$_sessionTotalTokens tokens'),
+        ],
+      ),
+    );
+  }
+
+  Widget _sessionInfoRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(width: 72, child: Text(label, style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Colors.grey[500]))),
         Expanded(child: Text(value, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Color(0xFF2D2D2D)))),
       ],
     );

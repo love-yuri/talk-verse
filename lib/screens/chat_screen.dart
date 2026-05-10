@@ -7,8 +7,10 @@ import '../models/ai_settings.dart';
 import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
+import '../models/token_record.dart';
 import '../services/chat_storage_service.dart';
 import '../services/settings_service.dart';
+import '../services/token_usage_service.dart';
 import '../utils/date_utils.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/chat_input.dart';
@@ -186,6 +188,9 @@ class _ChatScreenState extends State<ChatScreen> {
         onDeleteChat: _deleteChat,
         character: _character,
         onEditCharacter: () => _editCharacterFromSettings(),
+        messages: _messages,
+        systemPrompt: _buildSystemPrompt(),
+        sessionId: widget.session.id,
       ),
     ));
   }
@@ -331,7 +336,6 @@ class _ChatScreenState extends State<ChatScreen> {
             );
           }
         });
-        _scrollToBottom(jump: true);
       }).timeout(
         const Duration(minutes: 2),
         onTimeout: () => throw Exception('响应超时，请重试'),
@@ -339,6 +343,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (!mounted) return;
       setState(() => _isTyping = false);
+
+      final usage = _aiProvider?.lastUsage;
+      if (usage != null) {
+        await TokenUsageService().addRecord(TokenRecord(
+          id: aiMsgId,
+          sessionId: widget.session.id,
+          characterName: widget.session.characterName,
+          timestamp: DateTime.now(),
+          inputTokens: usage.inputTokens,
+          cacheReadTokens: usage.cacheReadTokens,
+          cacheCreateTokens: usage.cacheCreateTokens,
+          outputTokens: usage.outputTokens,
+          model: _aiProvider!.model,
+        ));
+      }
+
       _persistMessages();
     } catch (e) {
       if (!mounted) return;

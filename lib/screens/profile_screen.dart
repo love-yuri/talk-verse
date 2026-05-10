@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildMenuSection('更多功能', [
               _MenuItem(Icons.palette_rounded, '主题装扮', '个性化你的空间', const Color(0xFF4D96FF)),
               _MenuItem(Icons.diamond_rounded, '会员中心', '解锁专属特权', const Color(0xFF9B59B6)),
-              _MenuItem(Icons.settings_rounded, '设置', '偏好与账号管理', const Color(0xFF95A5A6)),
+              _MenuItem(Icons.settings_rounded, '设置', '偏好与账号管理', const Color(0xFF95A5A6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
             ]),
             const SizedBox(height: 14),
             _buildVersionBadge(),
@@ -50,7 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       subtitle: '个人中心',
       title: '我的',
       actions: [
-        GlassHeader.iconBtn(Icons.settings_outlined, onTap: () {}),
+        GlassHeader.iconBtn(Icons.settings_outlined, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
       ],
     );
   }
@@ -186,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildMenuItem(_MenuItem item) {
     return TapScale(
-      onTap: () {},
+      onTap: item.onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(children: [
@@ -233,5 +234,6 @@ class _MenuItem {
   final String label;
   final String subtitle;
   final Color color;
-  const _MenuItem(this.icon, this.label, this.subtitle, this.color);
+  final VoidCallback? onTap;
+  const _MenuItem(this.icon, this.label, this.subtitle, this.color, {this.onTap});
 }

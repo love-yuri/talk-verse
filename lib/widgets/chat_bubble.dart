@@ -14,6 +14,7 @@ class ChatBubble extends StatefulWidget {
   final VoidCallback? onLongPress;
   final ValueChanged<String>? onEditConfirm;
   final VoidCallback? onResend;
+  final VoidCallback? onDelete;
 
   const ChatBubble({
     super.key,
@@ -25,6 +26,7 @@ class ChatBubble extends StatefulWidget {
     this.onLongPress,
     this.onEditConfirm,
     this.onResend,
+    this.onDelete,
   });
 
   @override
@@ -102,6 +104,9 @@ class _ChatBubbleState extends State<ChatBubble> {
               const SnackBar(content: Text('已复制'), duration: Duration(seconds: 1)),
             );
           }),
+          _menuBtn(Icons.delete_outline, '删除', () {
+            widget.onDelete?.call();
+          }),
         ],
       ),
     );
@@ -174,7 +179,7 @@ class _ChatBubbleState extends State<ChatBubble> {
   /// 编辑中的气泡
   Widget _editingBubble(bool isUser) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 240),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 2 / 3),
       margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
         color: isUser ? AppColors.bubbleUser : AppColors.bubbleAI,
@@ -267,7 +272,7 @@ class _ChatBubbleState extends State<ChatBubble> {
 
   Widget _bubble(bool isUser) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 240),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 2 / 3),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
@@ -288,9 +293,42 @@ class _ChatBubbleState extends State<ChatBubble> {
           ),
         ],
       ),
-      child: Text(
-        widget.message.content,
-        style: isUser ? AppTextStyles.chatMessageUser : AppTextStyles.chatMessage,
+      child: isUser
+          ? Text(widget.message.content, style: AppTextStyles.chatMessageUser)
+          : _buildRichContent(widget.message.content),
+    );
+  }
+
+  /// 解析AI消息中的""引号内容并高亮显示
+  Widget _buildRichContent(String text) {
+    final spans = <TextSpan>[];
+    final regex = RegExp('“(.*?)”');
+    int lastEnd = 0;
+
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
+      }
+      spans.add(TextSpan(
+        text: '“${match.group(1)!}”',
+        style: const TextStyle(
+          color: Color(0xFF9C27B0),
+          fontWeight: FontWeight.w600,
+        ),
+      ));
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd)));
+    }
+    if (spans.isEmpty) {
+      spans.add(TextSpan(text: text));
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: AppTextStyles.chatMessage,
+        children: spans,
       ),
     );
   }

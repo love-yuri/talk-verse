@@ -46,7 +46,7 @@ class _ChatInputState extends State<ChatInput> {
       ),
       padding: EdgeInsets.only(left: 12, right: 12, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: _inputField()),
           const SizedBox(width: 8),
@@ -57,6 +57,17 @@ class _ChatInputState extends State<ChatInput> {
         ],
       ),
     );
+  }
+
+  void _insertParen() {
+    final ctrl = widget.controller;
+    final text = ctrl.text;
+    final selection = ctrl.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+
+    ctrl.text = '${text.substring(0, start)}()${text.substring(end)}';
+    ctrl.selection = TextSelection.collapsed(offset: start + 1);
   }
 
   Widget _inputField() {
@@ -75,6 +86,13 @@ class _ChatInputState extends State<ChatInput> {
           hintStyle: AppTextStyles.inputHint.copyWith(color: const Color(0xFFC4B0D9)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          suffix: Transform.translate(
+            offset: const Offset(0, 0),
+            child: TapScale(
+              onTap: _insertParen,
+              child: Text('()', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: const Color(0xFFC4B0D9).withValues(alpha: 0.7))),
+            ),
+          ),
         ),
         onSubmitted: (_) => widget.onSend(),
       ),

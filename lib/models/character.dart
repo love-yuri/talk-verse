@@ -1,7 +1,7 @@
 /// AI角色模型
 /// 定义AI角色的数据结构
 class Character {
-  final String id;
+  final int id;
   final String name;
   final String avatar;
   final String description;
@@ -26,7 +26,7 @@ class Character {
   /// 从JSON创建角色对象
   factory Character.fromJson(Map<String, dynamic> json) {
     return Character(
-      id: json['id'] as String,
+      id: json['id'] as int,
       name: json['name'] as String,
       avatar: json['avatar'] as String,
       description: json['description'] as String,
@@ -55,7 +55,7 @@ class Character {
 
   /// 创建副本
   Character copyWith({
-    String? id,
+    int? id,
     String? name,
     String? avatar,
     String? description,

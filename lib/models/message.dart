@@ -1,7 +1,7 @@
 /// 聊天消息模型
 /// 定义消息的数据结构
 class Message {
-  final String id;
+  final int id;
   final String content;
   final MessageType type;
   final DateTime timestamp;
@@ -20,7 +20,7 @@ class Message {
   /// 从JSON创建消息对象
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      id: json['id'] as String,
+      id: json['id'] as int,
       content: json['content'] as String,
       type: MessageType.values.firstWhere(
         (e) => e.name == json['type'],
@@ -49,7 +49,7 @@ class Message {
 
   /// 创建副本
   Message copyWith({
-    String? id,
+    int? id,
     String? content,
     MessageType? type,
     DateTime? timestamp,

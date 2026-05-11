@@ -1,7 +1,7 @@
 /// Token用量记录模型
 class TokenRecord {
-  final String id;
-  final String sessionId;
+  final int id;
+  final int sessionId;
   final String characterName;
   final DateTime timestamp;
   final int inputTokens;
@@ -26,8 +26,8 @@ class TokenRecord {
 
   factory TokenRecord.fromJson(Map<String, dynamic> json) {
     return TokenRecord(
-      id: json['id'] as String,
-      sessionId: json['sessionId'] as String,
+      id: json['id'] as int,
+      sessionId: json['sessionId'] as int,
       characterName: json['characterName'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       inputTokens: json['inputTokens'] as int,

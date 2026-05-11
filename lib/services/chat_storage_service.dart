@@ -1,54 +1,57 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/chat_session.dart';
+import 'database_helper.dart';
 
-/// 聊天记录持久化服务
-/// 使用 SharedPreferences 存储聊天会话列表
+/// 聊天会话元数据持久化服务
+/// 只管理会话元数据，消息由 MessageDao 独立管理
 class ChatStorageService {
-  static const _key = 'chat_sessions';
   static final ChatStorageService _instance = ChatStorageService._();
   ChatStorageService._();
   factory ChatStorageService() => _instance;
 
-  List<ChatSession> _sessions = [];
-
-  /// 加载所有会话
+  /// 加载所有会话（仅元数据，不含消息）
   Future<List<ChatSession>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_key);
-    if (json != null) {
-      final list = jsonDecode(json) as List<dynamic>;
-      _sessions = list
-          .map((e) => ChatSession.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return _sessions;
+    final db = DatabaseHelper().db;
+    final rows = await db.query('sessions', orderBy: 'updated_at DESC');
+    return rows.map((r) => ChatSession(
+      id: r['id'] as String,
+      characterId: r['character_id'] as String,
+      characterName: r['character_name'] as String,
+      characterAvatar: r['character_avatar'] as String,
+      createdAt: DateTime.parse(r['created_at'] as String),
+      updatedAt: DateTime.parse(r['updated_at'] as String),
+    )).toList();
   }
 
-  /// 保存整个会话列表
-  Future<void> save(List<ChatSession> sessions) async {
-    _sessions = sessions;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _key,
-      jsonEncode(sessions.map((e) => e.toJson()).toList()),
-    );
-  }
-
-  /// 保存单个会话（存在则更新，不存在则插入）
+  /// 保存或更新单个会话元数据
   Future<void> saveSession(ChatSession session) async {
-    final idx = _sessions.indexWhere((s) => s.id == session.id);
-    if (idx != -1) {
-      _sessions[idx] = session;
-    } else {
-      _sessions.add(session);
-    }
-    await save(_sessions);
+    final db = DatabaseHelper().db;
+    await db.insert('sessions', {
+      'id': session.id,
+      'character_id': session.characterId,
+      'character_name': session.characterName,
+      'character_avatar': session.characterAvatar,
+      'last_message_content': session.lastMessage?.content ?? '',
+      'last_message_time': session.lastMessage?.timestamp.toIso8601String(),
+      'unread_count': session.unreadCount,
+      'created_at': session.createdAt.toIso8601String(),
+      'updated_at': session.updatedAt.toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// 删除指定会话
+  /// 更新会话的最后消息预览
+  Future<void> updateLastMessage(String sessionId, String content, DateTime time) async {
+    final db = DatabaseHelper().db;
+    await db.update('sessions', {
+      'last_message_content': content,
+      'last_message_time': time.toIso8601String(),
+      'updated_at': time.toIso8601String(),
+    }, where: 'id = ?', whereArgs: [sessionId]);
+  }
+
+  /// 删除指定会话（级联删除消息）
   Future<void> deleteSession(String id) async {
-    _sessions.removeWhere((s) => s.id == id);
-    await save(_sessions);
+    final db = DatabaseHelper().db;
+    await db.delete('sessions', where: 'id = ?', whereArgs: [id]);
   }
 }

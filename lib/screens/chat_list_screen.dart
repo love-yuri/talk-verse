@@ -141,20 +141,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       Text(AppDateUtils.formatChatTime(session.updatedAt), style: AppTextStyles.labelSmall),
                     ]),
                     const SizedBox(height: 4),
-                    Row(children: [
-                      Expanded(child: Text(session.lastMessage?.content ?? '点击开始对话 ♡', style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      if (session.unreadCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Color(0xFFFFB6D9), Color(0xFFD4BBFF)]),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(session.unreadCount > 99 ? '99+' : '${session.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
-                        ),
-                      ],
-                    ]),
+                    Text('点击继续对话 ♡', style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),

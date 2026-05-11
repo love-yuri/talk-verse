@@ -68,9 +68,12 @@ class AnthropicProvider implements AiProvider {
   }) {
     return AnthropicRequest(
       model: settings.model,
-      maxTokens: settings.reasoningEnabled ? 8192 : 1024,
+      maxTokens: settings.maxTokens,
       thinkingEnabled: settings.reasoningEnabled,
       thinkingBudgetTokens: settings.reasoningBudgetTokens,
+      temperature: settings.reasoningEnabled ? null : settings.temperature,
+      topP: settings.reasoningEnabled ? null : settings.topP,
+      topK: settings.reasoningEnabled ? null : settings.topK,
       system: systemPrompt,
       tools: _sceneTools,
       messages: messages
@@ -145,9 +148,7 @@ class AnthropicProvider implements AiProvider {
       String toolUseName = '';
       String toolInputBuffer = '';
 
-      final stream = streamedResponse.stream
-          .transform(utf8.decoder)
-          .timeout(const Duration(seconds: 30));
+      final stream = streamedResponse.stream.transform(utf8.decoder);
       await for (final chunk in stream) {
         buffer += chunk;
         final lines = buffer.split('\n');

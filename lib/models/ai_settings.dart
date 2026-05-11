@@ -7,6 +7,10 @@ class ApiConfig {
   final String model;
   final bool reasoningEnabled;
   final int reasoningBudgetTokens;
+  final double temperature;
+  final int maxTokens;
+  final double topP;
+  final int topK;
 
   const ApiConfig({
     this.name = 'Default',
@@ -15,6 +19,10 @@ class ApiConfig {
     this.model = 'claude-sonnet-4-20250514',
     this.reasoningEnabled = false,
     this.reasoningBudgetTokens = 4000,
+    this.temperature = 1.0,
+    this.maxTokens = 1024,
+    this.topP = 0.9,
+    this.topK = 40,
   });
 
   factory ApiConfig.fromJson(Map<String, dynamic> json) {
@@ -25,6 +33,10 @@ class ApiConfig {
       model: json['model'] as String? ?? 'claude-sonnet-4-20250514',
       reasoningEnabled: json['reasoningEnabled'] as bool? ?? false,
       reasoningBudgetTokens: json['reasoningBudgetTokens'] as int? ?? 4000,
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 1.0,
+      maxTokens: json['maxTokens'] as int? ?? 1024,
+      topP: (json['topP'] as num?)?.toDouble() ?? 0.9,
+      topK: json['topK'] as int? ?? 40,
     );
   }
 
@@ -36,6 +48,10 @@ class ApiConfig {
       'model': model,
       'reasoningEnabled': reasoningEnabled,
       'reasoningBudgetTokens': reasoningBudgetTokens,
+      'temperature': temperature,
+      'maxTokens': maxTokens,
+      'topP': topP,
+      'topK': topK,
     };
   }
 
@@ -46,6 +62,10 @@ class ApiConfig {
     String? model,
     bool? reasoningEnabled,
     int? reasoningBudgetTokens,
+    double? temperature,
+    int? maxTokens,
+    double? topP,
+    int? topK,
   }) {
     return ApiConfig(
       name: name ?? this.name,
@@ -54,6 +74,10 @@ class ApiConfig {
       model: model ?? this.model,
       reasoningEnabled: reasoningEnabled ?? this.reasoningEnabled,
       reasoningBudgetTokens: reasoningBudgetTokens ?? this.reasoningBudgetTokens,
+      temperature: temperature ?? this.temperature,
+      maxTokens: maxTokens ?? this.maxTokens,
+      topP: topP ?? this.topP,
+      topK: topK ?? this.topK,
     );
   }
 
@@ -80,6 +104,10 @@ class AiSettings {
   String get model => activeConfig.model;
   bool get reasoningEnabled => activeConfig.reasoningEnabled;
   int get reasoningBudgetTokens => activeConfig.reasoningBudgetTokens;
+  double get temperature => activeConfig.temperature;
+  int get maxTokens => activeConfig.maxTokens;
+  double get topP => activeConfig.topP;
+  int get topK => activeConfig.topK;
   bool get isConfigured => activeConfig.isConfigured;
 
   factory AiSettings.fromJson(Map<String, dynamic> json) {

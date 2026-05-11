@@ -67,6 +67,9 @@ class AnthropicRequest {
   final bool thinkingEnabled;
   final int thinkingBudgetTokens;
   final List<Map<String, dynamic>>? tools;
+  final double? temperature;
+  final double? topP;
+  final int? topK;
 
   AnthropicRequest({
     required this.model,
@@ -76,6 +79,9 @@ class AnthropicRequest {
     this.thinkingEnabled = false,
     this.thinkingBudgetTokens = 4000,
     this.tools,
+    this.temperature,
+    this.topP,
+    this.topK,
   });
 
   Map<String, dynamic> toJson() {
@@ -85,6 +91,9 @@ class AnthropicRequest {
       'messages': messages.map((e) => e.toJson()).toList(),
     };
     if (system != null) json['system'] = system;
+    if (temperature != null) json['temperature'] = temperature;
+    if (topP != null) json['top_p'] = topP;
+    if (topK != null) json['top_k'] = topK;
     if (thinkingEnabled) {
       json['thinking'] = {
         'type': 'enabled',

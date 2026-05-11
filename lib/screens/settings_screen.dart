@@ -35,8 +35,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       urlCtrl: TextEditingController(text: c.baseUrl),
       keyCtrl: TextEditingController(text: c.apiKey),
       modelCtrl: TextEditingController(text: c.model),
+      maxTokensCtrl: TextEditingController(text: c.maxTokens.toString()),
+      reasoningBudgetCtrl: TextEditingController(text: c.reasoningBudgetTokens.toString()),
+      topKCtrl: TextEditingController(text: c.topK.toString()),
       obscureKey: true,
       reasoningEnabled: c.reasoningEnabled,
+      temperature: c.temperature,
+      topP: c.topP,
     )).toList();
     _activeIndex = settings.activeConfigIndex.clamp(0, _configs.length - 1);
     _editIndex = _activeIndex;
@@ -50,6 +55,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       c.urlCtrl.dispose();
       c.keyCtrl.dispose();
       c.modelCtrl.dispose();
+      c.maxTokensCtrl.dispose();
+      c.reasoningBudgetCtrl.dispose();
+      c.topKCtrl.dispose();
     }
     super.dispose();
   }
@@ -340,6 +348,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _buildField(entry.modelCtrl, 'Model', 'claude-sonnet-4-20250514', Icons.smart_toy_rounded),
       const SizedBox(height: 12),
       _buildReasoningToggle(entry),
+      const SizedBox(height: 12),
+      _buildTemperatureSlider(entry),
+      const SizedBox(height: 12),
+      _buildTopPSlider(entry),
+      const SizedBox(height: 12),
+      _buildField(entry.topKCtrl, 'Top K', '40', Icons.filter_list_rounded),
+      const SizedBox(height: 12),
+      _buildField(entry.maxTokensCtrl, '最大输出 Token', '1024', Icons.output_rounded),
+      if (entry.reasoningEnabled) ...[
+        const SizedBox(height: 12),
+        _buildField(entry.reasoningBudgetCtrl, '推理 Token 预算', '4000', Icons.psychology_rounded),
+      ],
       const SizedBox(height: 6),
       // 设为当前使用
       if (_editIndex != _activeIndex)
@@ -453,6 +473,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildTemperatureSlider(_ConfigEntry entry) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0E6F6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.thermostat_rounded, size: 18, color: AppColors.textTertiary),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Temperature', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF2D2D2D))),
+                  Text(
+                    '值越低回答越确定，值越高越有创意 (${entry.temperature.toStringAsFixed(2)})',
+                    style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, color: Colors.grey[400]),
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              activeTrackColor: AppColors.accent,
+              inactiveTrackColor: AppColors.accent.withValues(alpha: 0.15),
+              thumbColor: AppColors.accent,
+            ),
+            child: Slider(
+              value: entry.temperature,
+              min: 0,
+              max: 2,
+              divisions: 40,
+              onChanged: (v) => setState(() => entry.temperature = v),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopPSlider(_ConfigEntry entry) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0E6F6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.tune_rounded, size: 18, color: AppColors.textTertiary),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Top P', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF2D2D2D))),
+                  Text(
+                    '核采样：仅从累积概率前 ${((entry.topP) * 100).round()}% 的词中采样 (${entry.topP.toStringAsFixed(2)})',
+                    style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, color: Colors.grey[400]),
+                  ),
+                ],
+              ),
+            ),
+          ]),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              activeTrackColor: AppColors.accent,
+              inactiveTrackColor: AppColors.accent.withValues(alpha: 0.15),
+              thumbColor: AppColors.accent,
+            ),
+            child: Slider(
+              value: entry.topP,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              onChanged: (v) => setState(() => entry.topP = v),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── 添加 / 删除 ───
 
   Widget _buildAddDeleteRow() {
@@ -502,6 +634,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         urlCtrl: TextEditingController(text: 'https://api.anthropic.com'),
         keyCtrl: TextEditingController(),
         modelCtrl: TextEditingController(text: 'claude-sonnet-4-20250514'),
+        maxTokensCtrl: TextEditingController(text: '1024'),
+        reasoningBudgetCtrl: TextEditingController(text: '4000'),
+        topKCtrl: TextEditingController(text: '40'),
         obscureKey: true,
       ));
       _editIndex = _configs.length - 1;
@@ -549,6 +684,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       apiKey: c.keyCtrl.text.trim(),
       model: c.modelCtrl.text.trim().isEmpty ? 'claude-sonnet-4-20250514' : c.modelCtrl.text.trim(),
       reasoningEnabled: c.reasoningEnabled,
+      reasoningBudgetTokens: int.tryParse(c.reasoningBudgetCtrl.text.trim()) ?? 4000,
+      temperature: c.temperature,
+      maxTokens: int.tryParse(c.maxTokensCtrl.text.trim()) ?? 1024,
+      topP: c.topP,
+      topK: int.tryParse(c.topKCtrl.text.trim()) ?? 40,
     )).toList();
 
     final settings = AiSettings(configs: configs, activeConfigIndex: _activeIndex);
@@ -566,16 +706,26 @@ class _ConfigEntry {
   final TextEditingController urlCtrl;
   final TextEditingController keyCtrl;
   final TextEditingController modelCtrl;
+  final TextEditingController maxTokensCtrl;
+  final TextEditingController reasoningBudgetCtrl;
+  final TextEditingController topKCtrl;
   bool obscureKey;
   bool reasoningEnabled;
+  double temperature;
+  double topP;
 
   _ConfigEntry({
     required this.nameCtrl,
     required this.urlCtrl,
     required this.keyCtrl,
     required this.modelCtrl,
+    required this.maxTokensCtrl,
+    required this.reasoningBudgetCtrl,
+    required this.topKCtrl,
     this.obscureKey = true,
     this.reasoningEnabled = false,
+    this.temperature = 1.0,
+    this.topP = 0.9,
   });
 
   void dispose() {
@@ -583,5 +733,8 @@ class _ConfigEntry {
     urlCtrl.dispose();
     keyCtrl.dispose();
     modelCtrl.dispose();
+    maxTokensCtrl.dispose();
+    reasoningBudgetCtrl.dispose();
+    topKCtrl.dispose();
   }
 }

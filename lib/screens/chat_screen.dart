@@ -40,10 +40,12 @@ class _ChatScreenState extends State<ChatScreen> {
   AiProvider? _aiProvider;
   bool _isTyping = false;
   bool _loadingMessages = true;
-  String? _activeMenuMsgId;
+  int? _activeMenuMsgId;
   AiSettings _aiSettings = AiSettings();
   late Character? _character;
   double _prevBottomInset = 0;
+  String? _sceneLocation;
+  String? _sceneTime;
 
   @override
   void initState() {
@@ -54,6 +56,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _loadMessages() async {
+    // 从会话加载场景状态
+    _sceneLocation = widget.session.sceneLocation;
+    _sceneTime = widget.session.sceneTime;
+
     final messages = await _messageDao.loadMessages(widget.session.id);
     if (!mounted) return;
 
@@ -61,19 +67,19 @@ class _ChatScreenState extends State<ChatScreen> {
       // 新聊天，插入开场白
       final greeting = _character?.greeting ?? '你好！很高兴认识你！';
       final greetingMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: 0,
         content: greeting,
         type: MessageType.ai,
         timestamp: DateTime.now(),
       );
-      await _messageDao.insertMessage(widget.session.id, greetingMsg);
+      final newId = await _messageDao.insertMessage(widget.session.id, greetingMsg);
       await _chatStorage.updateLastMessage(
         widget.session.id,
         greeting,
         DateTime.now(),
       );
       setState(() {
-        _messages.add(greetingMsg);
+        _messages.add(greetingMsg.copyWith(id: newId));
         _loadingMessages = false;
       });
     } else {
@@ -115,6 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: AppColors.background,
       body: Column(children: [
         _buildAppBar(),
+        if (_sceneLocation != null && _sceneTime != null) _buildSceneHeader(),
         Expanded(child: _loadingMessages ? _buildLoading() : _buildMessages()),
         if (!_loadingMessages) _buildInput(),
       ]),
@@ -130,6 +137,36 @@ class _ChatScreenState extends State<ChatScreen> {
           SizedBox(height: 16),
           Text('加载聊天记录中...', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.textTertiary)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSceneHeader() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        key: ValueKey('$_sceneLocation-$_sceneTime'),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.08),
+          border: const Border(
+            bottom: BorderSide(color: AppColors.border, width: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.place, size: 14, color: AppColors.accent.withValues(alpha: 0.7)),
+            const SizedBox(width: 4),
+            Text(
+              '$_sceneLocation · $_sceneTime',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.accent.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,9 +336,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty || _isTyping) return;
 
-    final userMsgId = DateTime.now().millisecondsSinceEpoch.toString();
     final userMsg = Message(
-      id: userMsgId,
+      id: 0,
       content: text,
       type: MessageType.user,
       timestamp: DateTime.now(),
@@ -311,11 +347,15 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(userMsg);
       _msgCtrl.clear();
     });
-    await _messageDao.insertMessage(widget.session.id, userMsg);
+    final userMsgId = await _messageDao.insertMessage(widget.session.id, userMsg);
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == 0 && m.type == MessageType.user);
+      if (idx != -1) _messages[idx] = userMsg.copyWith(id: userMsgId);
+    });
     _scrollAfterFrame();
 
     if (_aiProvider == null) {
-      final failedMsg = userMsg.copyWith(status: MessageStatus.failed);
+      final failedMsg = userMsg.copyWith(id: userMsgId, status: MessageStatus.failed);
       setState(() {
         final idx = _messages.indexWhere((m) => m.id == userMsgId);
         if (idx != -1) _messages[idx] = failedMsg;
@@ -325,7 +365,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    final sentMsg = userMsg.copyWith(status: MessageStatus.sent);
+    final sentMsg = userMsg.copyWith(id: userMsgId, status: MessageStatus.sent);
     setState(() {
       final idx = _messages.indexWhere((m) => m.id == userMsgId);
       if (idx != -1) _messages[idx] = sentMsg;
@@ -334,9 +374,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() => _isTyping = true);
 
-    final aiMsgId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
     final typingMsg = Message(
-      id: aiMsgId,
+      id: 0,
       content: '',
       type: MessageType.typing,
       timestamp: DateTime.now(),
@@ -356,20 +395,29 @@ class _ChatScreenState extends State<ChatScreen> {
       await _aiProvider!.sendMessageStream(
         history,
         systemPrompt: systemPrompt,
-      ).forEach((chunk) {
+      ).forEach((event) {
         if (!mounted) return;
-        buffer.write(chunk);
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == aiMsgId);
-          if (idx != -1) {
-            _messages[idx] = Message(
-              id: aiMsgId,
-              content: buffer.toString(),
-              type: MessageType.ai,
-              timestamp: _messages[idx].timestamp,
-            );
+        if (event is AiTextEvent) {
+          buffer.write(event.text);
+          setState(() {
+            final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing);
+            if (idx != -1) {
+              _messages[idx] = _messages[idx].copyWith(content: buffer.toString());
+            }
+          });
+        } else if (event is AiToolUseEvent) {
+          if (event.name == 'update_scene') {
+            final loc = event.input['location'] as String? ?? '';
+            final time = event.input['time'] as String? ?? '';
+            if (loc.isNotEmpty && time.isNotEmpty) {
+              setState(() {
+                _sceneLocation = loc;
+                _sceneTime = time;
+              });
+              _chatStorage.updateScene(widget.session.id, loc, time);
+            }
           }
-        });
+        }
       }).timeout(
         const Duration(minutes: 2),
         onTimeout: () => throw Exception('响应超时，请重试'),
@@ -378,23 +426,34 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => _isTyping = false);
 
-      final aiMsg = Message(
-        id: aiMsgId,
-        content: buffer.toString(),
-        type: MessageType.ai,
-        timestamp: DateTime.now(),
-      );
-      await _messageDao.insertMessage(widget.session.id, aiMsg);
-      await _chatStorage.updateLastMessage(
-        widget.session.id,
-        aiMsg.content,
-        aiMsg.timestamp,
-      );
+      // AI 只调了工具没输出文字时，移除空的 typing 消息
+      if (buffer.isEmpty) {
+        setState(() {
+          _messages.removeWhere((m) => m.type == MessageType.typing);
+        });
+      } else {
+        final aiMsg = Message(
+          id: 0,
+          content: buffer.toString(),
+          type: MessageType.ai,
+          timestamp: DateTime.now(),
+        );
+        final newAiId = await _messageDao.insertMessage(widget.session.id, aiMsg);
+        setState(() {
+          final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing || m.type == MessageType.ai);
+          if (idx != -1) _messages[idx] = aiMsg.copyWith(id: newAiId);
+        });
+        await _chatStorage.updateLastMessage(
+          widget.session.id,
+          aiMsg.content,
+          aiMsg.timestamp,
+        );
+      }
 
       final usage = _aiProvider?.lastUsage;
       if (usage != null) {
         await TokenUsageService().addRecord(TokenRecord(
-          id: aiMsgId,
+          id: 0,
           sessionId: widget.session.id,
           characterName: widget.session.characterName,
           timestamp: DateTime.now(),
@@ -408,7 +467,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.removeWhere((m) => m.id == aiMsgId);
+        _messages.removeWhere((m) => m.type == MessageType.typing);
         final lastUserIdx = _messages.lastIndexWhere(
           (m) => m.type == MessageType.user && m.id == userMsgId,
         );
@@ -452,7 +511,14 @@ class _ChatScreenState extends State<ChatScreen> {
     '2. Character Knowledge Boundaries: Different characters have different knowledge. Character A knowing something does NOT mean Character B knows it, unless information transfer is explicitly shown in the conversation. '
     '3. Established Facts Are Immutable: Events already confirmed in the conversation (leaving a place, obtaining an item, a character\'s death, etc.) are canon and must never be contradicted. '
     '4. Scene Transition Consistency: When the scene shifts from location A to location B, only characters present at location B should appear. Characters at location A must not suddenly appear at location B without explanation. '
-    '5. Self-Check Before Replying: Before generating your reply, review the recent conversation to confirm the current scene, present characters, and key events that have occurred. Ensure your reply is consistent with all of this.';
+    '5. Self-Check Before Replying: Before generating your reply, review the recent conversation to confirm the current scene, present characters, and key events that have occurred. Ensure your reply is consistent with all of this. '
+    '[场景追踪工具使用规则] '
+    '你有一个名为 update_scene 的工具，用于追踪当前场景信息。以下情况你必须调用此工具： '
+    '1. 当场景从一个地点转移到另一个地点时（如从"宗门口"进入"练功房"）； '
+    '2. 当对话中明确提到时间流逝时（如"午时已过"、"到了傍晚"）； '
+    '3. 每次回复开始时，如果场景与上一次不同，立即调用 update_scene。 '
+    'location 参数填写当前所在地点，time 参数填写当前游戏内时间（使用中文时辰如"午时三刻"、"子时"等）。 '
+    '你可以在回复文本的同时调用此工具，两者互不影响。';
   }
 
   void _showConfigDialog() {
@@ -552,22 +618,31 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _insertGreeting() {
+  Future<void> _insertGreeting() async {
     final greeting = _character?.greeting ?? '你好！很高兴认识你！';
     final greetingMsg = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: 0,
       content: greeting,
       type: MessageType.ai,
       timestamp: DateTime.now(),
     );
     setState(() => _messages.add(greetingMsg));
-    _messageDao.insertMessage(widget.session.id, greetingMsg);
+    final newId = await _messageDao.insertMessage(widget.session.id, greetingMsg);
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == 0);
+      if (idx != -1) _messages[idx] = greetingMsg.copyWith(id: newId);
+    });
     _chatStorage.updateLastMessage(widget.session.id, greeting, DateTime.now());
   }
 
   void _clearChat() {
-    setState(() => _messages.clear());
+    setState(() {
+      _messages.clear();
+      _sceneLocation = null;
+      _sceneTime = null;
+    });
     _messageDao.clearSessionMessages(widget.session.id);
+    _chatStorage.updateScene(widget.session.id, '', '');
     _insertGreeting();
     Navigator.pop(context);
   }
@@ -609,9 +684,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() => _isTyping = true);
 
-    final aiMsgId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
     final typingMsg = Message(
-      id: aiMsgId,
+      id: 0,
       content: '',
       type: MessageType.typing,
       timestamp: DateTime.now(),
@@ -629,20 +703,29 @@ class _ChatScreenState extends State<ChatScreen> {
       await _aiProvider!.sendMessageStream(
         history,
         systemPrompt: systemPrompt,
-      ).forEach((chunk) {
+      ).forEach((event) {
         if (!mounted) return;
-        buffer.write(chunk);
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == aiMsgId);
-          if (idx != -1) {
-            _messages[idx] = Message(
-              id: aiMsgId,
-              content: buffer.toString(),
-              type: MessageType.ai,
-              timestamp: _messages[idx].timestamp,
-            );
+        if (event is AiTextEvent) {
+          buffer.write(event.text);
+          setState(() {
+            final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing);
+            if (idx != -1) {
+              _messages[idx] = _messages[idx].copyWith(content: buffer.toString());
+            }
+          });
+        } else if (event is AiToolUseEvent) {
+          if (event.name == 'update_scene') {
+            final loc = event.input['location'] as String? ?? '';
+            final time = event.input['time'] as String? ?? '';
+            if (loc.isNotEmpty && time.isNotEmpty) {
+              setState(() {
+                _sceneLocation = loc;
+                _sceneTime = time;
+              });
+              _chatStorage.updateScene(widget.session.id, loc, time);
+            }
           }
-        });
+        }
       }).timeout(
         const Duration(minutes: 2),
         onTimeout: () => throw Exception('响应超时，请重试'),
@@ -651,23 +734,33 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => _isTyping = false);
 
-      final aiMsg = Message(
-        id: aiMsgId,
-        content: buffer.toString(),
-        type: MessageType.ai,
-        timestamp: DateTime.now(),
-      );
-      await _messageDao.insertMessage(widget.session.id, aiMsg);
-      await _chatStorage.updateLastMessage(
-        widget.session.id,
-        aiMsg.content,
-        aiMsg.timestamp,
-      );
+      if (buffer.isEmpty) {
+        setState(() {
+          _messages.removeWhere((m) => m.type == MessageType.typing);
+        });
+      } else {
+        final aiMsg = Message(
+          id: 0,
+          content: buffer.toString(),
+          type: MessageType.ai,
+          timestamp: DateTime.now(),
+        );
+        final newAiId = await _messageDao.insertMessage(widget.session.id, aiMsg);
+        setState(() {
+          final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing || m.type == MessageType.ai);
+          if (idx != -1) _messages[idx] = aiMsg.copyWith(id: newAiId);
+        });
+        await _chatStorage.updateLastMessage(
+          widget.session.id,
+          aiMsg.content,
+          aiMsg.timestamp,
+        );
+      }
 
       final usage = _aiProvider?.lastUsage;
       if (usage != null) {
         await TokenUsageService().addRecord(TokenRecord(
-          id: aiMsgId,
+          id: 0,
           sessionId: widget.session.id,
           characterName: widget.session.characterName,
           timestamp: DateTime.now(),
@@ -681,7 +774,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.removeWhere((m) => m.id == aiMsgId);
+        _messages.removeWhere((m) => m.type == MessageType.typing);
         _isTyping = false;
       });
       _scrollAfterFrame();

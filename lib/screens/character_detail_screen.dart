@@ -202,9 +202,9 @@ class CharacterDetailScreen extends StatelessWidget {
     );
   }
 
-  void _startChat(BuildContext context) {
+  Future<void> _startChat(BuildContext context) async {
     final session = ChatSession(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: 0,
       characterId: character.id,
       characterName: character.name,
       characterAvatar: character.avatar,
@@ -212,8 +212,9 @@ class CharacterDetailScreen extends StatelessWidget {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    ChatStorageService().saveSession(session);
-    Navigator.push(context, _chatRoute(session, character));
+    final newId = await ChatStorageService().saveSession(session);
+    final savedSession = session.copyWith(id: newId);
+    Navigator.push(context, _chatRoute(savedSession, character));
   }
 
   void _editCharacter(BuildContext context) async {

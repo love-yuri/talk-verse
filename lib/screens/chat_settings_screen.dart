@@ -16,7 +16,7 @@ class ChatSettingsScreen extends StatefulWidget {
   final VoidCallback? onEditCharacter;
   final List<Message> messages;
   final String? systemPrompt;
-  final String? sessionId;
+  final int? sessionId;
 
   const ChatSettingsScreen({
     super.key,

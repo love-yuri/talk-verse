@@ -293,7 +293,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final character = Character(
-      id: widget.character?.id ?? 'ai_${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.character?.id ?? 0,
       name: _nameCtrl.text.trim(),
       avatar: widget.character?.avatar ?? 'assets/images/default_avatar.png',
       description: widget.character?.description ?? '',

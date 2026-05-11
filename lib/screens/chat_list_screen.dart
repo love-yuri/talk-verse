@@ -80,11 +80,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildItem(ChatSession session) {
-    final colorIdx = session.characterId.hashCode.abs() % AppColors.avatarColors.length;
+    final colorIdx = session.characterId % AppColors.avatarColors.length;
     final color = AppColors.avatarColors[colorIdx];
 
     return Dismissible(
-      key: Key(session.id),
+      key: Key('${session.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,

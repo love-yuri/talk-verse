@@ -11,6 +11,28 @@ import '../../models/message.dart';
 import '../ai_provider.dart';
 import 'anthropic_models.dart';
 
+/// 场景追踪工具定义
+const _sceneTools = [
+  {
+    'name': 'update_scene',
+    'description': '更新当前场景的地点和游戏内时间。当角色移动到新地点或时间发生变化时调用此工具。',
+    'input_schema': {
+      'type': 'object',
+      'properties': {
+        'location': {
+          'type': 'string',
+          'description': '当前场景地点，如"宗门口"、"练功房"、"集市"',
+        },
+        'time': {
+          'type': 'string',
+          'description': '当前游戏内时间，如"午时三刻"、"傍晚"、"深夜子时"',
+        },
+      },
+      'required': ['location', 'time'],
+    },
+  },
+];
+
 /// Anthropic API 实现
 class AnthropicProvider implements AiProvider {
   final AiSettings settings;
@@ -50,6 +72,7 @@ class AnthropicProvider implements AiProvider {
       thinkingEnabled: settings.reasoningEnabled,
       thinkingBudgetTokens: settings.reasoningBudgetTokens,
       system: systemPrompt,
+      tools: _sceneTools,
       messages: messages
           .map(
             (m) => AnthropicMessage(
@@ -84,7 +107,7 @@ class AnthropicProvider implements AiProvider {
   }
 
   @override
-  Stream<String> sendMessageStream(
+  Stream<AiEvent> sendMessageStream(
     List<Message> messages, {
     String? systemPrompt,
   }) async* {
@@ -115,6 +138,13 @@ class AnthropicProvider implements AiProvider {
       int cacheRead = 0;
       int cacheCreate = 0;
       int outputTokens = 0;
+
+      // tool_use 状态追踪
+      bool isToolUseBlock = false;
+      String toolUseId = '';
+      String toolUseName = '';
+      String toolInputBuffer = '';
+
       final stream = streamedResponse.stream
           .transform(utf8.decoder)
           .timeout(const Duration(seconds: 30));
@@ -151,17 +181,46 @@ class AnthropicProvider implements AiProvider {
                 cacheCreateTokens: cacheCreate,
                 outputTokens: outputTokens,
               );
+            } else if (type == 'content_block_start') {
+              final contentBlock = json['content_block'] as Map<String, dynamic>?;
+              if (contentBlock?['type'] == 'tool_use') {
+                isToolUseBlock = true;
+                toolUseId = contentBlock?['id'] as String? ?? '';
+                toolUseName = contentBlock?['name'] as String? ?? '';
+                toolInputBuffer = '';
+              }
             } else if (type == 'content_block_delta') {
               final delta = json['delta'] as Map<String, dynamic>?;
               final deltaType = delta?['type'] as String?;
               if (deltaType == 'text_delta') {
-                yield delta!['text'] as String;
+                yield AiTextEvent(delta!['text'] as String);
+              } else if (deltaType == 'input_json_delta') {
+                toolInputBuffer += delta?['partial_json'] as String? ?? '';
+              }
+            } else if (type == 'content_block_stop') {
+              if (isToolUseBlock) {
+                try {
+                  final input = jsonDecode(toolInputBuffer) as Map<String, dynamic>;
+                  yield AiToolUseEvent(
+                    id: toolUseId,
+                    name: toolUseName,
+                    input: input,
+                  );
+                } on FormatException {
+                  // JSON 解析失败，忽略此工具调用
+                }
+                isToolUseBlock = false;
+                toolUseId = '';
+                toolUseName = '';
+                toolInputBuffer = '';
               }
             } else if (type == 'error') {
               final err = json['error'] as Map<String, dynamic>?;
               throw Exception('API 错误: ${err?['message'] ?? data}');
             }
-          } catch (_) {}
+          } on Exception {
+            // 解析异常，跳过此条 SSE 数据
+          }
         }
       }
     } finally {

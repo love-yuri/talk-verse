@@ -4,17 +4,36 @@
 class AnthropicContent {
   final String type;
   final String text;
+  final String? id;
+  final String? name;
+  final Map<String, dynamic>? input;
 
-  AnthropicContent({required this.type, required this.text});
+  AnthropicContent({
+    required this.type,
+    this.text = '',
+    this.id,
+    this.name,
+    this.input,
+  });
 
   factory AnthropicContent.fromJson(Map<String, dynamic> json) {
     return AnthropicContent(
       type: json['type']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
+      id: json['id']?.toString(),
+      name: json['name']?.toString(),
+      input: json['input'] as Map<String, dynamic>?,
     );
   }
 
-  Map<String, dynamic> toJson() => {'type': type, 'text': text};
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{'type': type};
+    if (text.isNotEmpty) json['text'] = text;
+    if (id != null) json['id'] = id;
+    if (name != null) json['name'] = name;
+    if (input != null) json['input'] = input;
+    return json;
+  }
 }
 
 /// 单条消息
@@ -47,6 +66,7 @@ class AnthropicRequest {
   final String? system;
   final bool thinkingEnabled;
   final int thinkingBudgetTokens;
+  final List<Map<String, dynamic>>? tools;
 
   AnthropicRequest({
     required this.model,
@@ -55,6 +75,7 @@ class AnthropicRequest {
     this.system,
     this.thinkingEnabled = false,
     this.thinkingBudgetTokens = 4000,
+    this.tools,
   });
 
   Map<String, dynamic> toJson() {
@@ -69,6 +90,9 @@ class AnthropicRequest {
         'type': 'enabled',
         'budget_tokens': thinkingBudgetTokens,
       };
+    }
+    if (tools != null && tools!.isNotEmpty) {
+      json['tools'] = tools;
     }
     return json;
   }

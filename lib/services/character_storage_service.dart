@@ -10,6 +10,14 @@ class CharacterStorageService {
   CharacterStorageService._();
   factory CharacterStorageService() => _instance;
 
+  /// 按 ID 加载单个角色
+  Future<Character?> loadById(int id) async {
+    final db = DatabaseHelper().db;
+    final rows = await db.query('characters', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty) return null;
+    return _rowToCharacter(rows.first);
+  }
+
   /// 加载所有角色
   Future<List<Character>> load() async {
     final db = DatabaseHelper().db;

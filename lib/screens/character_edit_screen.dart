@@ -244,12 +244,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Text('*', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.error)),
-              Text('开场白', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-            ],
-          ),
+          const Text('开场白', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           TextFormField(
             controller: _greetingCtrl,
@@ -257,7 +252,7 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
             minLines: 3,
             style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.textPrimary, height: 1.6),
             decoration: InputDecoration(
-              hintText: '开始对话时角色说的第一句话',
+              hintText: '开始对话时角色说的第一句话（可选）',
               hintStyle: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.textTertiary),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -274,7 +269,6 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
               contentPadding: const EdgeInsets.all(12),
               isDense: true,
             ),
-            validator: (v) => (v == null || v.trim().isEmpty) ? '必填' : null,
           ),
           const SizedBox(height: 4),
           Align(

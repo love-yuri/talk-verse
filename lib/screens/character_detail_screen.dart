@@ -136,7 +136,7 @@ class CharacterDetailScreen extends StatelessWidget {
         children: [
           _infoRow('性格特点', character.personality),
           const SizedBox(height: 16),
-          _infoRow('开场问候', character.greeting),
+          _infoRow('开场问候', character.greeting.isNotEmpty ? character.greeting : '无'),
           const SizedBox(height: 16),
           _infoRow('我的称呼', character.myNickname),
           const SizedBox(height: 16),

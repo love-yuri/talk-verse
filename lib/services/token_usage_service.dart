@@ -1,40 +1,65 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/token_record.dart';
+import 'database_helper.dart';
 
-/// Token用量持久化服务
+/// Token 用量持久化服务（SQLite 版）
 class TokenUsageService {
-  static const _key = 'token_records';
   static final TokenUsageService _instance = TokenUsageService._();
   TokenUsageService._();
   factory TokenUsageService() => _instance;
 
-  List<TokenRecord> _records = [];
-
+  /// 加载所有 Token 记录
   Future<List<TokenRecord>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_key);
-    if (json != null) {
-      final list = jsonDecode(json) as List<dynamic>;
-      _records = list.map((e) => TokenRecord.fromJson(e as Map<String, dynamic>)).toList();
-    }
-    return _records;
+    final db = DatabaseHelper().db;
+    final rows = await db.query('token_records', orderBy: 'timestamp DESC');
+    return rows.map(_rowToRecord).toList();
   }
 
+  /// 添加一条 Token 记录
   Future<void> addRecord(TokenRecord record) async {
-    _records.insert(0, record); // 最新的在前
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(_records.map((e) => e.toJson()).toList()));
+    final db = DatabaseHelper().db;
+    await db.insert('token_records', {
+      'id': record.id,
+      'session_id': record.sessionId,
+      'character_name': record.characterName,
+      'timestamp': record.timestamp.toIso8601String(),
+      'input_tokens': record.inputTokens,
+      'cache_read_tokens': record.cacheReadTokens,
+      'cache_create_tokens': record.cacheCreateTokens,
+      'output_tokens': record.outputTokens,
+      'model': record.model,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  /// 清空所有记录
   Future<void> clear() async {
-    _records.clear();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_key);
+    final db = DatabaseHelper().db;
+    await db.delete('token_records');
   }
 
   /// 获取某个会话的所有记录
-  List<TokenRecord> recordsForSession(String sessionId) {
-    return _records.where((r) => r.sessionId == sessionId).toList();
+  Future<List<TokenRecord>> recordsForSession(String sessionId) async {
+    final db = DatabaseHelper().db;
+    final rows = await db.query(
+      'token_records',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+      orderBy: 'timestamp DESC',
+    );
+    return rows.map(_rowToRecord).toList();
+  }
+
+  TokenRecord _rowToRecord(Map<String, dynamic> r) {
+    return TokenRecord(
+      id: r['id'] as String,
+      sessionId: r['session_id'] as String,
+      characterName: r['character_name'] as String,
+      timestamp: DateTime.parse(r['timestamp'] as String),
+      inputTokens: r['input_tokens'] as int,
+      cacheReadTokens: r['cache_read_tokens'] as int? ?? 0,
+      cacheCreateTokens: r['cache_create_tokens'] as int? ?? 0,
+      outputTokens: r['output_tokens'] as int,
+      model: r['model'] as String,
+    );
   }
 }

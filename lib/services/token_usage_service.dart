@@ -19,7 +19,6 @@ class TokenUsageService {
   Future<void> addRecord(TokenRecord record) async {
     final db = DatabaseHelper().db;
     await db.insert('token_records', {
-      'id': record.id,
       'session_id': record.sessionId,
       'character_name': record.characterName,
       'timestamp': record.timestamp.toIso8601String(),
@@ -38,7 +37,7 @@ class TokenUsageService {
   }
 
   /// 获取某个会话的所有记录
-  Future<List<TokenRecord>> recordsForSession(String sessionId) async {
+  Future<List<TokenRecord>> recordsForSession(int sessionId) async {
     final db = DatabaseHelper().db;
     final rows = await db.query(
       'token_records',
@@ -51,8 +50,8 @@ class TokenUsageService {
 
   TokenRecord _rowToRecord(Map<String, dynamic> r) {
     return TokenRecord(
-      id: r['id'] as String,
-      sessionId: r['session_id'] as String,
+      id: r['id'] as int,
+      sessionId: r['session_id'] as int,
       characterName: r['character_name'] as String,
       timestamp: DateTime.parse(r['timestamp'] as String),
       inputTokens: r['input_tokens'] as int,

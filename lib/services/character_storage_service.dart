@@ -17,11 +17,11 @@ class CharacterStorageService {
     return rows.map(_rowToCharacter).toList();
   }
 
-  /// 保存或更新角色
-  Future<void> save(Character character) async {
+  /// 保存或更新角色，返回自动生成的 ID
+  Future<int> save(Character character) async {
     final db = DatabaseHelper().db;
-    await db.insert('characters', {
-      'id': character.id,
+    final data = <String, Object?>{
+      if (character.id != 0) 'id': character.id,
       'name': character.name,
       'avatar': character.avatar,
       'description': character.description,
@@ -30,18 +30,19 @@ class CharacterStorageService {
       'tags': jsonEncode(character.tags),
       'my_nickname': character.myNickname,
       'ai_nickname': character.aiNickname,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    };
+    return await db.insert('characters', data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// 删除角色
-  Future<void> delete(String id) async {
+  Future<void> delete(int id) async {
     final db = DatabaseHelper().db;
     await db.delete('characters', where: 'id = ?', whereArgs: [id]);
   }
 
   Character _rowToCharacter(Map<String, dynamic> r) {
     return Character(
-      id: r['id'] as String,
+      id: r['id'] as int,
       name: r['name'] as String,
       avatar: r['avatar'] as String,
       description: r['description'] as String,

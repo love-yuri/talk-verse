@@ -14,20 +14,21 @@ class ChatStorageService {
     final db = DatabaseHelper().db;
     final rows = await db.query('sessions', orderBy: 'updated_at DESC');
     return rows.map((r) => ChatSession(
-      id: r['id'] as String,
-      characterId: r['character_id'] as String,
+      id: r['id'] as int,
+      characterId: r['character_id'] as int,
       characterName: r['character_name'] as String,
       characterAvatar: r['character_avatar'] as String,
       createdAt: DateTime.parse(r['created_at'] as String),
       updatedAt: DateTime.parse(r['updated_at'] as String),
+      sceneLocation: r['scene_location'] as String?,
+      sceneTime: r['scene_time'] as String?,
     )).toList();
   }
 
-  /// 保存或更新单个会话元数据
-  Future<void> saveSession(ChatSession session) async {
+  /// 保存或更新单个会话元数据，返回自动生成的 ID
+  Future<int> saveSession(ChatSession session) async {
     final db = DatabaseHelper().db;
-    await db.insert('sessions', {
-      'id': session.id,
+    return await db.insert('sessions', {
       'character_id': session.characterId,
       'character_name': session.characterName,
       'character_avatar': session.characterAvatar,
@@ -36,11 +37,13 @@ class ChatStorageService {
       'unread_count': session.unreadCount,
       'created_at': session.createdAt.toIso8601String(),
       'updated_at': session.updatedAt.toIso8601String(),
+      'scene_location': session.sceneLocation,
+      'scene_time': session.sceneTime,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// 更新会话的最后消息预览
-  Future<void> updateLastMessage(String sessionId, String content, DateTime time) async {
+  Future<void> updateLastMessage(int sessionId, String content, DateTime time) async {
     final db = DatabaseHelper().db;
     await db.update('sessions', {
       'last_message_content': content,
@@ -50,8 +53,18 @@ class ChatStorageService {
   }
 
   /// 删除指定会话（级联删除消息）
-  Future<void> deleteSession(String id) async {
+  Future<void> deleteSession(int id) async {
     final db = DatabaseHelper().db;
     await db.delete('sessions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 更新会话的场景信息
+  Future<void> updateScene(int sessionId, String location, String time) async {
+    final db = DatabaseHelper().db;
+    await db.update('sessions', {
+      'scene_location': location.isEmpty ? null : location,
+      'scene_time': time.isEmpty ? null : time,
+      'updated_at': DateTime.now().toIso8601String(),
+    }, where: 'id = ?', whereArgs: [sessionId]);
   }
 }

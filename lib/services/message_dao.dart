@@ -10,7 +10,7 @@ class MessageDao {
   factory MessageDao() => _instance;
 
   /// 加载指定会话的所有消息
-  Future<List<Message>> loadMessages(String sessionId) async {
+  Future<List<Message>> loadMessages(int sessionId) async {
     final db = DatabaseHelper().db;
     final rows = await db.query(
       'messages',
@@ -21,11 +21,10 @@ class MessageDao {
     return rows.map(_rowToMessage).toList();
   }
 
-  /// 插入一条消息
-  Future<void> insertMessage(String sessionId, Message msg) async {
+  /// 插入一条消息，返回自动生成的 ID
+  Future<int> insertMessage(int sessionId, Message msg) async {
     final db = DatabaseHelper().db;
-    await db.insert('messages', {
-      'id': msg.id,
+    return await db.insert('messages', {
       'session_id': sessionId,
       'content': msg.content,
       'type': msg.type.name,
@@ -48,20 +47,20 @@ class MessageDao {
   }
 
   /// 删除一条消息
-  Future<void> deleteMessage(String msgId) async {
+  Future<void> deleteMessage(int msgId) async {
     final db = DatabaseHelper().db;
     await db.delete('messages', where: 'id = ?', whereArgs: [msgId]);
   }
 
   /// 清空指定会话的所有消息
-  Future<void> clearSessionMessages(String sessionId) async {
+  Future<void> clearSessionMessages(int sessionId) async {
     final db = DatabaseHelper().db;
     await db.delete('messages', where: 'session_id = ?', whereArgs: [sessionId]);
   }
 
   Message _rowToMessage(Map<String, dynamic> r) {
     return Message(
-      id: r['id'] as String,
+      id: r['id'] as int,
       content: r['content'] as String,
       type: MessageType.values.firstWhere(
         (e) => e.name == r['type'],

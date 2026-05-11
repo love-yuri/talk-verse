@@ -94,7 +94,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           _menuBtn(Icons.edit, '编辑', () {
             setState(() => _isEditing = true);
           }),
-          if (widget.isLast && widget.message.status == MessageStatus.failed)
+          if (widget.isLast)
             _menuBtn(Icons.refresh, '重发', () {
               widget.onResend?.call();
             }),

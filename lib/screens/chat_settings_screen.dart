@@ -49,8 +49,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
 
   Future<void> _loadSessionTokens() async {
     if (widget.sessionId == null) return;
-    final records = await TokenUsageService().load();
-    final sessionRecords = records.where((r) => r.sessionId == widget.sessionId);
+    final sessionRecords = await TokenUsageService().recordsForSession(widget.sessionId!);
     if (!mounted) return;
     setState(() {
       _sessionTotalTokens = sessionRecords.fold<int>(0, (sum, r) => sum + r.totalTokens);

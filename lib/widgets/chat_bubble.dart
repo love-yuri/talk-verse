@@ -139,7 +139,9 @@ class _ChatBubbleState extends State<ChatBubble> {
 
   /// 带状态指示器的气泡
   Widget _bubbleWithStatus(bool isUser) {
-    if (widget.message.type == MessageType.typing) return _typingBubble();
+    if (widget.message.type == MessageType.typing) {
+      return widget.message.content.isEmpty ? _typingBubble() : _bubble(isUser);
+    }
 
     // 编辑模式
     if (_isEditing) return _editingBubble(isUser);

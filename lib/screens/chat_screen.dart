@@ -8,6 +8,7 @@ import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
 import '../models/token_record.dart';
+import '../services/character_storage_service.dart';
 import '../services/chat_storage_service.dart';
 import '../services/message_dao.dart';
 import '../services/settings_service.dart';
@@ -46,11 +47,14 @@ class _ChatScreenState extends State<ChatScreen> {
   double _prevBottomInset = 0;
   String? _sceneLocation;
   String? _sceneTime;
+  bool _userScrolling = false;
+  bool _showScrollToBottom = false;
 
   @override
   void initState() {
     super.initState();
     _character = widget.character;
+    _scrollCtrl.addListener(_onScroll);
     _initProvider();
     _loadMessages();
   }
@@ -64,34 +68,45 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
 
     if (messages.isEmpty) {
-      // 新聊天，插入开场白
-      final greeting = _character?.greeting ?? '你好！很高兴认识你！';
-      final greetingMsg = Message(
-        id: 0,
-        content: greeting,
-        type: MessageType.ai,
-        timestamp: DateTime.now(),
-      );
-      final newId = await _messageDao.insertMessage(widget.session.id, greetingMsg);
-      await _chatStorage.updateLastMessage(
-        widget.session.id,
-        greeting,
-        DateTime.now(),
-      );
-      setState(() {
-        _messages.add(greetingMsg.copyWith(id: newId));
-        _loadingMessages = false;
-      });
+      // 新聊天，插入开场白（开场白为空则跳过）
+      final greeting = _character?.greeting ?? '';
+      if (greeting.isNotEmpty) {
+        final greetingMsg = Message(
+          id: 0,
+          content: greeting,
+          type: MessageType.ai,
+          timestamp: DateTime.now(),
+        );
+        final newId = await _messageDao.insertMessage(widget.session.id, greetingMsg);
+        await _chatStorage.updateLastMessage(
+          widget.session.id,
+          greeting,
+          DateTime.now(),
+        );
+        setState(() {
+          _messages.add(greetingMsg.copyWith(id: newId));
+          _loadingMessages = false;
+        });
+      } else {
+        setState(() {
+          _loadingMessages = false;
+        });
+      }
     } else {
       setState(() {
         _messages.addAll(messages);
         _loadingMessages = false;
       });
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _updateScrollButtonAfterFrame();
   }
 
   Future<void> _initProvider() async {
+    // 如果未传入角色，从数据库加载
+    if (_character == null && widget.session.characterId > 0) {
+      _character = await CharacterStorageService().loadById(widget.session.characterId);
+    }
+
     final settings = await _settingsService.load();
     if (!mounted) return;
     _aiSettings = settings;
@@ -100,10 +115,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _refreshProvider() async {
+    final settings = await _settingsService.load();
+    if (!mounted) return;
+    _aiSettings = settings;
+    if (settings.isConfigured) {
+      _aiProvider?.cancel();
+      setState(() => _aiProvider = AnthropicProvider(settings));
+    }
+  }
+
   @override
   void dispose() {
     _aiProvider?.cancel();
     _msgCtrl.dispose();
+    _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -122,7 +148,19 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(children: [
         _buildAppBar(),
         if (_sceneLocation != null && _sceneTime != null) _buildSceneHeader(),
-        Expanded(child: _loadingMessages ? _buildLoading() : _buildMessages()),
+        Expanded(
+          child: Stack(
+            children: [
+              _loadingMessages ? _buildLoading() : _buildMessages(),
+              if (_showScrollToBottom && !_loadingMessages)
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: _buildScrollToBottomButton(),
+                ),
+            ],
+          ),
+        ),
         if (!_loadingMessages) _buildInput(),
       ]),
     );
@@ -211,7 +249,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Image.asset(
                   widget.session.characterAvatar,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 20, color: Colors.white70),
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Colors.white70),
                 ),
               ),
             ),
@@ -279,35 +317,36 @@ class _ChatScreenState extends State<ChatScreen> {
     return RawScrollbar(
       controller: _scrollCtrl,
       thumbVisibility: true,
+      interactive: true,
       thickness: 3,
       radius: const Radius.circular(2),
       thumbColor: AppColors.accent.withValues(alpha: 0.25),
       trackVisibility: false,
       child: ListView.builder(
-      controller: _scrollCtrl,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      itemCount: _messages.length,
-      itemBuilder: (context, i) {
-        final msg = _messages[i];
-        final showTime = i == 0 || msg.timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
-        final isLast = i == _messages.length - 1;
-        final isFailed = msg.status == MessageStatus.failed;
-        return Column(children: [
-          if (showTime) _timeDivider(msg.timestamp),
-          ChatBubble(
-            message: msg,
-            characterAvatar: widget.session.characterAvatar,
-            characterName: widget.session.characterName,
-            isLast: isLast,
-            isMenuActive: _activeMenuMsgId == msg.id,
-            onLongPress: () => setState(() => _activeMenuMsgId = msg.id),
-            onEditConfirm: (newContent) => _updateMessage(i, newContent),
-            onResend: isLast ? () => _handleResend(i) : (isFailed ? () => _resendMessage(i) : null),
-            onDelete: () => _deleteMessage(i),
-          ),
-        ]);
-      },
-    ),
+        controller: _scrollCtrl,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        itemCount: _messages.length,
+        itemBuilder: (context, i) {
+          final msg = _messages[i];
+          final showTime = i == 0 || msg.timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
+          final isLast = i == _messages.length - 1;
+          final isFailed = msg.status == MessageStatus.failed;
+          return Column(children: [
+            if (showTime) _timeDivider(msg.timestamp),
+            ChatBubble(
+              message: msg,
+              characterAvatar: widget.session.characterAvatar,
+              characterName: widget.session.characterName,
+              isLast: isLast,
+              isMenuActive: _activeMenuMsgId == msg.id,
+              onLongPress: () => setState(() => _activeMenuMsgId = msg.id),
+              onEditConfirm: (newContent) => _updateMessage(i, newContent),
+              onResend: isLast ? () => _handleResend(i) : (isFailed ? () => _resendMessage(i) : null),
+              onDelete: () => _deleteMessage(i),
+            ),
+          ]);
+        },
+      ),
     );
   }
 
@@ -332,9 +371,45 @@ class _ChatScreenState extends State<ChatScreen> {
     return ChatInput(controller: _msgCtrl, onSend: _send, onTextChanged: (_) => _scrollToBottom());
   }
 
+  Widget _buildScrollToBottomButton() {
+    return AnimatedScale(
+      scale: _showScrollToBottom ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      child: TapScale(
+        onTap: () {
+          _userScrolling = false;
+          _scrollAfterFrame(userTriggered: true);
+        },
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.keyboard_arrow_down,
+            size: 24,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _send() async {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty || _isTyping) return;
+
+    // 发送消息时重置用户滚动标志，确保自动滚动到底部
+    _userScrolling = false;
 
     final userMsg = Message(
       id: 0,
@@ -536,7 +611,8 @@ class _ChatScreenState extends State<ChatScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))
+                  .then((_) => _refreshProvider());
             },
             child: const Text('去设置'),
           ),
@@ -545,18 +621,54 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _scrollToBottom({bool jump = false}) {
+  Future<void> _scrollToBottom({bool jump = false, bool userTriggered = false}) async {
     if (!_scrollCtrl.hasClients) return;
-    final target = _scrollCtrl.position.maxScrollExtent;
-    if (jump) {
-      _scrollCtrl.jumpTo(target);
-    } else {
-      _scrollCtrl.animateTo(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    if (_userScrolling && !userTriggered) return;
+
+    var lastTarget = -1.0;
+    for (var i = 0; i < 3; i++) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      final target = _scrollCtrl.position.maxScrollExtent;
+      if (target == lastTarget && (target - _scrollCtrl.position.pixels).abs() < 1) {
+        _updateScrollButtonVisibility();
+        return;
+      }
+      lastTarget = target;
+
+      if (jump) {
+        _scrollCtrl.jumpTo(target);
+      } else {
+        await _scrollCtrl.animateTo(target, duration: const Duration(milliseconds: 420), curve: Curves.easeOutCubic);
+      }
+      _updateScrollButtonVisibility();
+      await WidgetsBinding.instance.endOfFrame;
     }
   }
 
-  void _scrollAfterFrame({bool jump = false}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(jump: jump));
+  void _scrollAfterFrame({bool jump = false, bool userTriggered = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom(jump: jump, userTriggered: userTriggered);
+    });
+  }
+
+  void _updateScrollButtonAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateScrollButtonVisibility();
+    });
+  }
+
+  void _updateScrollButtonVisibility() {
+    if (!_scrollCtrl.hasClients) return;
+    final position = _scrollCtrl.position;
+    final show = position.maxScrollExtent - position.pixels > 100;
+    if (show != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = show);
+    }
+  }
+
+  void _onScroll() {
+    _updateScrollButtonVisibility();
   }
 
   void _updateMessage(int index, String newContent) {
@@ -619,7 +731,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _insertGreeting() async {
-    final greeting = _character?.greeting ?? '你好！很高兴认识你！';
+    final greeting = _character?.greeting ?? '';
+    if (greeting.isEmpty) return;
     final greetingMsg = Message(
       id: 0,
       content: greeting,
@@ -681,6 +794,9 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     if (_isTyping) return;
+
+    // 重发消息时重置用户滚动标志
+    _userScrolling = false;
 
     setState(() => _isTyping = true);
 

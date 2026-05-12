@@ -19,9 +19,12 @@ class CharacterListScreen extends StatefulWidget {
 class _CharacterListScreenState extends State<CharacterListScreen> {
   final _storage = CharacterStorageService();
   final _roleCardSync = RoleCardSyncService();
-  List<Character> _characters = [];
+  List<DiscoverCharacterItem> _localCharacters = [];
+  List<DiscoverCharacterItem> _remoteCharacters = [];
   bool _loading = true;
   bool _syncing = false;
+
+  int get _totalCount => _localCharacters.length + _remoteCharacters.length;
 
   @override
   void initState() {
@@ -30,38 +33,60 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   }
 
   Future<void> _loadCharacters() async {
-    final list = await _storage.load();
+    final list = await _storage.loadForDiscover();
     if (!mounted) return;
     setState(() {
-      _characters = list;
+      _localCharacters = list.where((item) => !item.isRemote).toList();
+      _remoteCharacters = list.where((item) => item.isRemote).toList();
       _loading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addCharacter,
-        backgroundColor: AppColors.accent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-      ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(child: _loading ? _buildLoading() : _buildGrid()),
-        ],
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        floatingActionButton: FloatingActionButton(
+          onPressed: _addCharacter,
+          backgroundColor: AppColors.accent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+        ),
+        body: Column(
+          children: [
+            _buildHeader(),
+            _buildSourceTabs(),
+            Expanded(
+              child: _loading
+                  ? _buildLoading()
+                  : TabBarView(
+                      children: [
+                        _buildGrid(
+                          _localCharacters,
+                          emptyTitle: '还没有本地角色',
+                          emptySubtitle: '点击右下角按钮创建第一个角色吧',
+                        ),
+                        _buildGrid(
+                          _remoteCharacters,
+                          emptyTitle: '还没有远程角色',
+                          emptySubtitle: '点击右上角同步共享角色吧',
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader() {
     return GlassHeader(
-      subtitle: '${_characters.length} 个角色可选',
+      subtitle: '$_totalCount 个角色可选',
       title: '发现',
-      badge: '${_characters.length}',
+      badge: '$_totalCount',
       actions: [
         GlassHeader.iconBtn(
           _syncing ? Icons.sync_rounded : Icons.cloud_download_rounded,
@@ -77,9 +102,37 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
     return const Center(child: CircularProgressIndicator(color: AppColors.accent));
   }
 
-  Widget _buildGrid() {
-    if (_characters.isEmpty) {
-      return _buildEmpty();
+  Widget _buildSourceTabs() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+        border: Border.all(color: const Color(0xFFF0E6F6), width: 0.5),
+      ),
+      child: TabBar(
+        indicator: BoxDecoration(
+          color: AppColors.accent,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: Colors.white,
+        unselectedLabelColor: AppColors.textSecondary,
+        labelStyle: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w500),
+        tabs: [
+          Tab(text: '本地角色（${_localCharacters.length}）'),
+          Tab(text: '远程角色（${_remoteCharacters.length}）'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGrid(List<DiscoverCharacterItem> items, {required String emptyTitle, required String emptySubtitle}) {
+    if (items.isEmpty) {
+      return _buildEmpty(emptyTitle, emptySubtitle);
     }
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 80),
@@ -89,9 +142,9 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
         crossAxisSpacing: 12,
         childAspectRatio: 0.9,
       ),
-      itemCount: _characters.length,
+      itemCount: items.length,
       itemBuilder: (context, i) {
-        final character = _characters[i];
+        final character = items[i].character;
         return Dismissible(
           key: ValueKey(character.id),
           direction: DismissDirection.endToStart,
@@ -133,21 +186,21 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(String title, String subtitle) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('✨', style: TextStyle(fontSize: 48)),
+          const Text('✨', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          const Text(
-            '还没有角色',
-            style: TextStyle(fontFamily: 'MapleMono', fontSize: 15, color: AppColors.textSecondary),
+          Text(
+            title,
+            style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '点击右下角按钮创建第一个角色吧',
-            style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: AppColors.textTertiary),
+          Text(
+            subtitle,
+            style: const TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: AppColors.textTertiary),
           ),
         ],
       ),
@@ -197,7 +250,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
   void _addCharacter() async {
     final newChar = await Navigator.push<Character>(
       context,
-      MaterialPageRoute(builder: (_) => CharacterEditScreen(index: _characters.length, isCreating: true)),
+      MaterialPageRoute(builder: (_) => CharacterEditScreen(index: _totalCount, isCreating: true)),
     );
     if (newChar != null) {
       await _storage.save(newChar);

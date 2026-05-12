@@ -13,17 +13,24 @@ enum RemoteDatabaseKind { system, roleCard }
 class RemoteDatabaseService {
   final WebDavService webDav;
 
-  RemoteDatabaseService({WebDavService? webDav}) : webDav = webDav ?? WebDavService();
+  RemoteDatabaseService({WebDavService? webDav})
+    : webDav = webDav ?? WebDavService();
 
   /// 获取远程数据库，缺失时自动创建
   Future<File> getDatabase(RemoteDatabaseKind kind) async {
     final remotePath = _remotePath(kind);
     try {
       final file = await webDav.download(remotePath);
+      print(
+        '[RemoteDatabase] 下载远程数据库成功: kind=$kind, remotePath=$remotePath, localPath=${file.path}, bytes=${await file.length()}',
+      );
       await _ensureSchema(kind, file.path);
       return file;
     } on WebDavException catch (e) {
       if (e.statusCode != 404) rethrow;
+      print(
+        '[RemoteDatabase] 远程数据库不存在，将创建空库: kind=$kind, remotePath=$remotePath',
+      );
       return _createRemoteDatabase(kind);
     }
   }
@@ -33,10 +40,16 @@ class RemoteDatabaseService {
     final remotePath = _remotePath(kind);
     try {
       final file = await webDav.download(remotePath);
+      print(
+        '[RemoteDatabase] 写入前下载远程数据库成功: kind=$kind, remotePath=$remotePath, localPath=${file.path}, bytes=${await file.length()}',
+      );
       await _ensureSchema(kind, file.path);
       return file;
     } on WebDavException catch (e) {
       if (e.statusCode != 404) rethrow;
+      print(
+        '[RemoteDatabase] 写入前发现远程数据库不存在，将创建空库: kind=$kind, remotePath=$remotePath',
+      );
       await webDav.ensureRemoteDirectory();
       final file = await _createLocalDatabase(kind);
       await webDav.upload(remotePath, file);
@@ -48,6 +61,9 @@ class RemoteDatabaseService {
     await webDav.ensureRemoteDirectory();
     final file = await _createLocalDatabase(kind);
     await webDav.upload(_remotePath(kind), file);
+    print(
+      '[RemoteDatabase] 已创建并上传远程数据库: kind=$kind, remotePath=${_remotePath(kind)}, localPath=${file.path}',
+    );
     return file;
   }
 
@@ -70,8 +86,16 @@ class RemoteDatabaseService {
           value TEXT NOT NULL
         )
       ''');
-      await db.insert('metadata', {'key': 'schema_version', 'value': '1'}, conflictAlgorithm: ConflictAlgorithm.replace);
-      await db.insert('metadata', {'key': 'app', 'value': 'talk-verse'}, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+        'metadata',
+        {'key': 'schema_version', 'value': '1'},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await db.insert(
+        'metadata',
+        {'key': 'app', 'value': 'talk-verse'},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
       if (kind == RemoteDatabaseKind.system) {
         await _ensureSystemSchema(db);
       } else {
@@ -90,7 +114,9 @@ class RemoteDatabaseService {
         password TEXT NOT NULL
       )
     ''');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)',
+    );
     await db.execute('''
       CREATE TABLE IF NOT EXISTS user_ai_settings (
         user_id INTEGER PRIMARY KEY,
@@ -102,9 +128,8 @@ class RemoteDatabaseService {
   }
 
   Future<void> _ensureRoleCardSchema(Database db) async {
-    await db.execute('DROP TABLE IF EXISTS shared_role_cards');
     await db.execute('''
-      CREATE TABLE shared_role_cards (
+      CREATE TABLE IF NOT EXISTS shared_role_cards (
         remote_id TEXT PRIMARY KEY,
         owner_username TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -112,11 +137,74 @@ class RemoteDatabaseService {
         personality TEXT NOT NULL,
         greeting TEXT DEFAULT '',
         my_nickname TEXT DEFAULT '冒险者',
-        ai_nickname TEXT DEFAULT '',
-        character_json TEXT NOT NULL
+        ai_nickname TEXT DEFAULT ''
       )
     ''');
-    await db.execute('CREATE INDEX idx_shared_role_cards_owner ON shared_role_cards(owner_username)');
+
+    final columns = await db.rawQuery('PRAGMA table_info(shared_role_cards)');
+    final columnNames = columns.map((column) => column['name'] as String).toSet();
+    if (columnNames.contains('character_json')) {
+      final countBefore =
+          Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM shared_role_cards'),
+          ) ??
+          0;
+      print(
+        '[RemoteDatabase] 检测到旧角色卡表 character_json 字段，开始迁移保留 $countBefore 行数据',
+      );
+      await db.transaction((txn) async {
+        await txn.execute(
+          'ALTER TABLE shared_role_cards RENAME TO shared_role_cards_old',
+        );
+        await txn.execute('''
+          CREATE TABLE shared_role_cards (
+            remote_id TEXT PRIMARY KEY,
+            owner_username TEXT NOT NULL,
+            name TEXT NOT NULL,
+            avatar TEXT NOT NULL,
+            personality TEXT NOT NULL,
+            greeting TEXT DEFAULT '',
+            my_nickname TEXT DEFAULT '冒险者',
+            ai_nickname TEXT DEFAULT ''
+          )
+        ''');
+        await txn.execute('''
+          INSERT INTO shared_role_cards (
+            remote_id,
+            owner_username,
+            name,
+            avatar,
+            personality,
+            greeting,
+            my_nickname,
+            ai_nickname
+          )
+          SELECT
+            remote_id,
+            owner_username,
+            name,
+            avatar,
+            personality,
+            COALESCE(greeting, ''),
+            COALESCE(my_nickname, '冒险者'),
+            COALESCE(ai_nickname, '')
+          FROM shared_role_cards_old
+        ''');
+        await txn.execute('DROP TABLE shared_role_cards_old');
+      });
+      final countAfter =
+          Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM shared_role_cards'),
+          ) ??
+          0;
+      print(
+        '[RemoteDatabase] 角色卡表迁移完成: before=$countBefore, after=$countAfter',
+      );
+    }
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_shared_role_cards_owner ON shared_role_cards(owner_username)',
+    );
   }
 
   String _remotePath(RemoteDatabaseKind kind) {

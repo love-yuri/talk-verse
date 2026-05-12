@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../constants/webdav_config.dart';
@@ -45,7 +43,9 @@ class RoleCardSyncService {
     await webDav.withLock(WebDavConfig.roleCardDbPath, (lockToken) async {
       final file = await remoteDb.getDatabaseForWrite(RemoteDatabaseKind.roleCard);
       final remoteId = await _remoteIdForCharacter(character, session);
-      final characterJson = jsonEncode(character.toJson());
+      print(
+        '[RoleCardSync] 发布角色卡: remoteId=$remoteId, name=${character.name}, owner=${session.username}',
+      );
       final db = await databaseFactory.openDatabase(file.path);
       try {
         await db.insert(
@@ -59,7 +59,6 @@ class RoleCardSyncService {
             'greeting': character.greeting,
             'my_nickname': character.myNickname,
             'ai_nickname': character.aiNickname,
-            'character_json': characterJson,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
@@ -73,30 +72,45 @@ class RoleCardSyncService {
 
   /// 同步共享区角色卡到本地
   Future<RoleCardSyncResult> syncRemoteToLocal() async {
-    await _requireSession();
+    final session = await _requireSession();
+    print(
+      '[RoleCardSync] 开始同步共享角色卡: user=${session.username}, remotePath=${WebDavConfig.roleCardDbPath}',
+    );
     final file = await remoteDb.getDatabase(RemoteDatabaseKind.roleCard);
+    print('[RoleCardSync] 远程角色卡数据库已下载: ${file.path}');
     final db = await databaseFactory.openDatabase(file.path);
     var inserted = 0;
     var updated = 0;
     try {
       final rows = await db.query('shared_role_cards');
+      print('[RoleCardSync] shared_role_cards 行数: ${rows.length}');
       for (final row in rows) {
+        print(
+          '[RoleCardSync] 读取远程角色卡行: remote_id=${row['remote_id']}, owner=${row['owner_username']}, name=${row['name']}',
+        );
         final remote = RemoteRoleCard.fromRow(row);
         final meta = await _metaByRemoteId(remote.remoteId);
         if (meta == null) {
           final localId = await characterStorage.save(remote.character.copyWith(id: 0));
           await _upsertSyncMeta(localId, remote.remoteId, remote.ownerUsername);
+          print(
+            '[RoleCardSync] 新增远程角色到本地: remoteId=${remote.remoteId}, localId=$localId, name=${remote.character.name}',
+          );
           inserted++;
           continue;
         }
         final localId = meta['local_character_id'] as int;
         await characterStorage.save(remote.character.copyWith(id: localId));
         await _upsertSyncMeta(localId, remote.remoteId, remote.ownerUsername);
+        print(
+          '[RoleCardSync] 更新本地远程角色: remoteId=${remote.remoteId}, localId=$localId, name=${remote.character.name}',
+        );
         updated++;
       }
     } finally {
       await db.close();
     }
+    print('[RoleCardSync] 同步完成: inserted=$inserted, updated=$updated');
     return RoleCardSyncResult(inserted: inserted, updated: updated);
   }
 
@@ -108,13 +122,24 @@ class RoleCardSyncService {
 
   Future<String> _remoteIdForCharacter(Character character, UserSession session) async {
     final db = DatabaseHelper().db;
-    final rows = await db.query('character_sync_meta', columns: ['remote_id'], where: 'local_character_id = ?', whereArgs: [character.id], limit: 1);
+    final rows = await db.query(
+      'character_sync_meta',
+      columns: ['remote_id'],
+      where: 'local_character_id = ?',
+      whereArgs: [character.id],
+      limit: 1,
+    );
     if (rows.isNotEmpty) return rows.first['remote_id'] as String;
     return '${session.username}_${character.id}_${DateTime.now().microsecondsSinceEpoch}';
   }
 
   Future<Map<String, Object?>?> _metaByRemoteId(String remoteId) async {
-    final rows = await DatabaseHelper().db.query('character_sync_meta', where: 'remote_id = ?', whereArgs: [remoteId], limit: 1);
+    final rows = await DatabaseHelper().db.query(
+      'character_sync_meta',
+      where: 'remote_id = ?',
+      whereArgs: [remoteId],
+      limit: 1,
+    );
     return rows.isEmpty ? null : rows.first;
   }
 

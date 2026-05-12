@@ -10,6 +10,21 @@ class CharacterSyncSaveResult {
   const CharacterSyncSaveResult({required this.id, required this.updatedExisting});
 }
 
+/// 发现页角色来源信息
+class DiscoverCharacterItem {
+  final Character character;
+  final String? remoteId;
+  final String? ownerUsername;
+
+  const DiscoverCharacterItem({
+    required this.character,
+    this.remoteId,
+    this.ownerUsername,
+  });
+
+  bool get isRemote => remoteId != null;
+}
+
 /// 角色数据持久化服务（SQLite 版）
 /// 不预设默认角色，首次安装返回空列表
 class CharacterStorageService {
@@ -30,6 +45,34 @@ class CharacterStorageService {
     final db = DatabaseHelper().db;
     final rows = await db.query('characters');
     return rows.map(_rowToCharacter).toList();
+  }
+
+  /// 加载发现页角色及同步来源信息
+  Future<List<DiscoverCharacterItem>> loadForDiscover() async {
+    final db = DatabaseHelper().db;
+    final rows = await db.rawQuery('''
+      SELECT
+        c.id,
+        c.name,
+        c.avatar,
+        c.personality,
+        c.greeting,
+        c.my_nickname,
+        c.ai_nickname,
+        m.remote_id,
+        m.owner_username
+      FROM characters c
+      LEFT JOIN character_sync_meta m ON m.local_character_id = c.id
+      ORDER BY c.id ASC
+    ''');
+
+    return rows.map((row) {
+      return DiscoverCharacterItem(
+        character: _rowToCharacter(row),
+        remoteId: row['remote_id'] as String?,
+        ownerUsername: row['owner_username'] as String?,
+      );
+    }).toList();
   }
 
   /// 按名称查找角色
@@ -72,7 +115,7 @@ class CharacterStorageService {
     await db.delete('characters', where: 'id = ?', whereArgs: [id]);
   }
 
-  Character _rowToCharacter(Map<String, dynamic> r) {
+  Character _rowToCharacter(Map<String, Object?> r) {
     return Character(
       id: r['id'] as int,
       name: r['name'] as String,

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'character.dart';
 
 /// 远程共享角色卡摘要
@@ -15,11 +13,18 @@ class RemoteRoleCard {
   });
 
   factory RemoteRoleCard.fromRow(Map<String, Object?> row) {
-    final characterJson = jsonDecode(row['character_json'] as String) as Map<String, dynamic>;
     return RemoteRoleCard(
       remoteId: row['remote_id'] as String,
       ownerUsername: row['owner_username'] as String,
-      character: Character.fromRemoteJson(characterJson),
+      character: Character.fromRemoteJson({
+        'id': 0,
+        'name': row['name'],
+        'avatar': row['avatar'],
+        'personality': row['personality'],
+        'greeting': row['greeting'],
+        'myNickname': row['my_nickname'],
+        'aiNickname': row['ai_nickname'],
+      }),
     );
   }
 }

@@ -11,13 +11,16 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:window_manager/window_manager.dart';
 import 'constants/app_colors.dart';
+import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'services/auth_service.dart';
 import 'services/database_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('zh_CN');
   await DatabaseHelper().init();
+  await AuthService().loadSession();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -78,7 +81,7 @@ class TalkVerseApp extends StatelessWidget {
           iconTheme: IconThemeData(color: AppColors.textPrimary),
         ),
       ),
-      home: const MainScreen(),
+      home: AuthService().isLoggedIn ? const MainScreen() : const LoginScreen(),
     );
   }
 }

@@ -12,14 +12,12 @@ class ChatStorageService {
   /// 加载所有会话（仅元数据，不含消息）
   Future<List<ChatSession>> load() async {
     final db = DatabaseHelper().db;
-    final rows = await db.query('sessions', orderBy: 'updated_at DESC');
+    final rows = await db.query('sessions', orderBy: 'id DESC');
     return rows.map((r) => ChatSession(
       id: r['id'] as int,
       characterId: r['character_id'] as int,
       characterName: r['character_name'] as String,
       characterAvatar: r['character_avatar'] as String,
-      createdAt: DateTime.parse(r['created_at'] as String),
-      updatedAt: DateTime.parse(r['updated_at'] as String),
       sceneLocation: r['scene_location'] as String?,
       sceneTime: r['scene_time'] as String?,
     )).toList();
@@ -35,8 +33,6 @@ class ChatStorageService {
       'last_message_content': session.lastMessage?.content ?? '',
       'last_message_time': session.lastMessage?.timestamp.toIso8601String(),
       'unread_count': session.unreadCount,
-      'created_at': session.createdAt.toIso8601String(),
-      'updated_at': session.updatedAt.toIso8601String(),
       'scene_location': session.sceneLocation,
       'scene_time': session.sceneTime,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -48,7 +44,6 @@ class ChatStorageService {
     await db.update('sessions', {
       'last_message_content': content,
       'last_message_time': time.toIso8601String(),
-      'updated_at': time.toIso8601String(),
     }, where: 'id = ?', whereArgs: [sessionId]);
   }
 
@@ -64,7 +59,6 @@ class ChatStorageService {
     await db.update('sessions', {
       'scene_location': location.isEmpty ? null : location,
       'scene_time': time.isEmpty ? null : time,
-      'updated_at': DateTime.now().toIso8601String(),
     }, where: 'id = ?', whereArgs: [sessionId]);
   }
 }

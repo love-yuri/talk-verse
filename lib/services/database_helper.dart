@@ -15,17 +15,28 @@ class DatabaseHelper {
 
   /// 初始化数据库（在 main() 中调用）
   Future<void> init() async {
-    // 桌面平台使用 FFI
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
     final appDir = await getApplicationDocumentsDirectory();
     final dbPath = '${appDir.path}${Platform.pathSeparator}talkverse.db';
 
+    await _open(dbPath);
+  }
+
+  /// 初始化内存数据库，供 widget 测试使用
+  Future<void> initInMemory() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    await _open(inMemoryDatabasePath);
+  }
+
+  Future<void> _open(String dbPath) async {
+    await _db?.close();
     _db = await databaseFactory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 4,
+        version: 7,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -33,7 +44,6 @@ class DatabaseHelper {
         },
       ),
     );
-
   }
 
   /// 建表
@@ -47,8 +57,6 @@ class DatabaseHelper {
         last_message_content TEXT DEFAULT '',
         last_message_time TEXT,
         unread_count INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
         scene_location TEXT,
         scene_time TEXT
       )
@@ -88,18 +96,28 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         avatar TEXT NOT NULL,
-        description TEXT NOT NULL,
         personality TEXT NOT NULL,
-        greeting TEXT NOT NULL,
-        tags TEXT DEFAULT '[]',
+        greeting TEXT DEFAULT '',
         my_nickname TEXT DEFAULT '冒险者',
         ai_nickname TEXT DEFAULT ''
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE character_sync_meta (
+        local_character_id INTEGER PRIMARY KEY,
+        remote_id TEXT NOT NULL UNIQUE,
+        owner_username TEXT NOT NULL,
+        last_synced_at TEXT NOT NULL,
+        FOREIGN KEY (local_character_id) REFERENCES characters(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_character_sync_remote_id ON character_sync_meta(remote_id)');
   }
 
-  /// 数据库升级 - 直接删除旧表重建
+  /// 升级：直接 DROP 重建，不写迁移兼容代码
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    await db.execute('DROP TABLE IF EXISTS character_sync_meta');
     await db.execute('DROP TABLE IF EXISTS token_records');
     await db.execute('DROP TABLE IF EXISTS messages');
     await db.execute('DROP TABLE IF EXISTS sessions');

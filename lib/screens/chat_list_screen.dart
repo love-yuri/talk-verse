@@ -3,7 +3,6 @@ import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 import '../models/chat_session.dart';
 import '../services/chat_storage_service.dart';
-import '../utils/date_utils.dart';
 import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
 import 'chat_screen.dart';
@@ -126,7 +125,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     child: Image.asset(
                       session.characterAvatar,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 26, color: Colors.grey),
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 26, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -136,10 +135,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      Expanded(child: Text(session.characterName, style: AppTextStyles.label)),
-                      Text(AppDateUtils.formatChatTime(session.updatedAt), style: AppTextStyles.labelSmall),
-                    ]),
+                    Text(session.characterName, style: AppTextStyles.label),
                     const SizedBox(height: 4),
                     Text('点击继续对话 ♡', style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],

@@ -265,7 +265,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           child: Image.asset(
             avatarPath,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 18, color: Colors.grey),
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 18, color: Colors.grey),
           ),
         ),
       ),

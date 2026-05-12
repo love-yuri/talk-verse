@@ -290,10 +290,8 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
       id: widget.character?.id ?? 0,
       name: _nameCtrl.text.trim(),
       avatar: widget.character?.avatar ?? 'assets/images/default_avatar.png',
-      description: widget.character?.description ?? '',
       personality: _personalityCtrl.text.trim(),
       greeting: _greetingCtrl.text.trim(),
-      tags: widget.character?.tags ?? [],
       myNickname: widget.character?.myNickname ?? '冒险者',
       aiNickname: widget.character?.aiNickname ?? '',
     );

@@ -8,8 +8,6 @@ class ChatSession {
   final String characterName;
   final String characterAvatar;
   final List<Message> messages;
-  final DateTime createdAt;
-  final DateTime updatedAt;
   final String? sceneLocation;
   final String? sceneTime;
 
@@ -19,8 +17,6 @@ class ChatSession {
     required this.characterName,
     required this.characterAvatar,
     this.messages = const [],
-    required this.createdAt,
-    required this.updatedAt,
     this.sceneLocation,
     this.sceneTime,
   });
@@ -36,8 +32,6 @@ class ChatSession {
               ?.map((e) => Message.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
       sceneLocation: json['sceneLocation'] as String?,
       sceneTime: json['sceneTime'] as String?,
     );
@@ -51,8 +45,6 @@ class ChatSession {
       'characterName': characterName,
       'characterAvatar': characterAvatar,
       'messages': messages.map((e) => e.toJson()).toList(),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
       if (sceneLocation != null) 'sceneLocation': sceneLocation,
       if (sceneTime != null) 'sceneTime': sceneTime,
     };
@@ -71,8 +63,6 @@ class ChatSession {
     String? characterName,
     String? characterAvatar,
     List<Message>? messages,
-    DateTime? createdAt,
-    DateTime? updatedAt,
     String? sceneLocation,
     String? sceneTime,
   }) {
@@ -82,8 +72,6 @@ class ChatSession {
       characterName: characterName ?? this.characterName,
       characterAvatar: characterAvatar ?? this.characterAvatar,
       messages: messages ?? this.messages,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       sceneLocation: sceneLocation ?? this.sceneLocation,
       sceneTime: sceneTime ?? this.sceneTime,
     );

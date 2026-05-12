@@ -24,6 +24,7 @@ class CharacterCard extends StatelessWidget {
     return TapScale(
       onTap: onTap,
       child: Container(
+        width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
@@ -36,14 +37,15 @@ class CharacterCard extends StatelessWidget {
             ),
           ],
         ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Hero(
               tag: 'avatar_${character.id}',
               child: Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -63,7 +65,7 @@ class CharacterCard extends StatelessWidget {
                   child: Image.asset(
                     character.avatar,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, _) => Icon(Icons.person, size: 32, color: color.withValues(alpha: 0.6)),
+                    errorBuilder: (context, error, stackTrace) => Icon(Icons.person, size: 36, color: color.withValues(alpha: 0.6)),
                   ),
                 ),
               ),
@@ -72,34 +74,6 @@ class CharacterCard extends StatelessWidget {
             Text(
               character.name,
               style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: -0.24),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                character.description,
-                style: const TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textSecondary, letterSpacing: 0.07),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: character.tags.take(2).map((tag) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
-                    ),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-                  ),
-                  child: Text(tag, style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.85))),
-                ),
-              )).toList(),
             ),
           ],
         ),

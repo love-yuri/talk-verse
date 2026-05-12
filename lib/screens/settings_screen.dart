@@ -4,6 +4,8 @@ import '../constants/app_dimensions.dart';
 import '../constants/app_text_styles.dart';
 import '../models/ai_settings.dart';
 import '../services/settings_service.dart';
+import '../services/auth_service.dart';
+import '../services/settings_sync_service.dart';
 import '../widgets/warm_background.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,7 +17,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _settingsService = SettingsService();
+  final _settingsSync = SettingsSyncService();
+  final _authService = AuthService();
   bool _isLoading = true;
+  bool _isSaving = false;
   late List<_ConfigEntry> _configs;
   late int _activeIndex;
   int _editIndex = 0;
@@ -661,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSaveButton() {
     return TapScale(
-      onTap: _save,
+      onTap: _isSaving ? null : _save,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -670,14 +675,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
           boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: const Center(
-          child: Text('保存设置', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.41)),
+        child: Center(
+          child: _isSaving
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('保存设置', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.41)),
         ),
       ),
     );
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
     final configs = _configs.map((c) => ApiConfig(
       name: c.nameCtrl.text.trim().isEmpty ? 'Config' : c.nameCtrl.text.trim(),
       baseUrl: c.urlCtrl.text.trim().isEmpty ? 'https://api.anthropic.com' : c.urlCtrl.text.trim(),
@@ -693,10 +703,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final settings = AiSettings(configs: configs, activeConfigIndex: _activeIndex);
     await _settingsService.save(settings);
+
+    var message = '设置已保存';
+    var color = AppColors.success;
+    final session = _authService.session ?? await _authService.loadSession();
+    if (session != null) {
+      try {
+        await _settingsSync.pushAiSettings(settings);
+        message = '设置已保存并同步到云端';
+      } catch (e) {
+        message = '设置已保存，云端同步失败：$e';
+        color = AppColors.error;
+      }
+    }
+
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('设置已保存'), backgroundColor: AppColors.success),
-      );
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    } else {
+      _isSaving = false;
     }
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
-import '../constants/app_text_styles.dart';
 import '../models/character.dart';
 import '../models/chat_session.dart';
 import '../services/chat_storage_service.dart';
+import '../services/role_card_sync_service.dart';
 import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
 import 'character_edit_screen.dart';
@@ -67,6 +67,8 @@ class CharacterDetailScreen extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            GlassHeader.iconBtn(Icons.cloud_upload_rounded, onTap: () => _publishCharacter(context)),
+            const SizedBox(width: 8),
             GlassHeader.iconBtn(Icons.edit_rounded, onTap: () => _editCharacter(context)),
             const SizedBox(width: 8),
             GlassHeader.iconBtn(Icons.delete_outline_rounded, onTap: () => _confirmDelete(context)),
@@ -102,15 +104,13 @@ class CharacterDetailScreen extends StatelessWidget {
                 child: Image.asset(
                   character.avatar,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Icon(Icons.person, size: 50, color: color.withValues(alpha: 0.6)),
+                  errorBuilder: (context, error, stackTrace) => Icon(Icons.person, size: 50, color: color.withValues(alpha: 0.6)),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 20),
           Text(character.name, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, letterSpacing: -0.41)),
-          const SizedBox(height: 8),
-          Text(character.description, style: AppTextStyles.bodySmall, textAlign: TextAlign.center),
           const SizedBox(height: 20),
           _infoCard(context, color),
           const SizedBox(height: 32),
@@ -141,25 +141,6 @@ class CharacterDetailScreen extends StatelessWidget {
           _infoRow('我的称呼', character.myNickname),
           const SizedBox(height: 16),
           _infoRow('AI 称呼', character.aiNickname.isNotEmpty ? character.aiNickname : character.name),
-          if (character.tags.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text('标签', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: character.tags.map((tag) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(tag, style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.85))),
-              )).toList(),
-            ),
-          ],
         ],
       ),
     );
@@ -209,12 +190,37 @@ class CharacterDetailScreen extends StatelessWidget {
       characterName: character.name,
       characterAvatar: character.avatar,
       messages: [],
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
     );
     final newId = await ChatStorageService().saveSession(session);
+    if (!context.mounted) return;
     final savedSession = session.copyWith(id: newId);
     Navigator.push(context, _chatRoute(savedSession, character));
+  }
+
+  Future<void> _publishCharacter(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('发布角色卡'),
+        content: Text('将「${character.name}」发布到共享区？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('发布')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await RoleCardSyncService().publish(character);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('角色卡已发布到共享区'), backgroundColor: AppColors.success));
+    } catch (e) {
+      print('发布角色卡失败: $e');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+    }
   }
 
   void _editCharacter(BuildContext context) async {

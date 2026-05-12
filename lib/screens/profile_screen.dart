@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/settings_sync_service.dart';
+import '../models/user_session.dart';
+import '../constants/app_colors.dart';
 import '../widgets/glass_header.dart';
 import '../widgets/warm_background.dart';
+import 'login_screen.dart';
 import 'settings_screen.dart';
 import 'token_usage_screen.dart';
 
@@ -12,6 +17,22 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final _authService = AuthService();
+  final _settingsSync = SettingsSyncService();
+  UserSession? _session;
+  bool _syncingSettings = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final session = await _authService.loadSession();
+    if (!mounted) return;
+    setState(() => _session = session);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             const SizedBox(height: 14),
             _buildMenuSection('更多功能', [
+              _MenuItem(Icons.login_rounded, _session == null ? '登录' : '退出登录', _session == null ? '登录后同步云端数据' : '当前：${_session!.username}', const Color(0xFF6BCB77), onTap: _session == null ? _openLogin : _confirmLogout),
+              _MenuItem(Icons.cloud_sync_rounded, '拉取云端设置', _syncingSettings ? '正在同步...' : '同步当前账号的模型配置', const Color(0xFF4D96FF), onTap: _syncingSettings ? null : _pullCloudSettings),
               _MenuItem(Icons.data_usage_rounded, 'Token 用量', '查看API请求消耗明细', const Color(0xFF8B6FC0), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TokenUsageScreen()))),
               _MenuItem(Icons.palette_rounded, '主题装扮', '个性化你的空间', const Color(0xFF4D96FF)),
               _MenuItem(Icons.settings_rounded, '设置', '偏好与账号管理', const Color(0xFF95A5A6), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
@@ -99,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             // 用户名
-            const Text('冒险者', style: TextStyle(fontFamily: 'MapleMono', fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D), letterSpacing: 0.35)),
+            Text(_session?.username ?? '未登录', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D), letterSpacing: 0.35)),
             const SizedBox(height: 4),
             // 等级标签
             Container(
@@ -113,7 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 8),
             // 个性签名
             Text(
-              '与AI相遇的每一天都充满惊喜 ✨',
+              _session == null ? '登录后同步模型配置与角色卡' : '与AI相遇的每一天都充满惊喜 ✨',
               style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.grey[500], letterSpacing: -0.08),
             ),
           ],
@@ -227,6 +250,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: const Text('TalkVerse v1.0.0 ♡', style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.07)),
     );
+  }
+  Future<void> _openLogin() async {
+    final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    if (changed == true) _loadSession();
+  }
+
+  void _confirmLogout() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('退出登录'),
+        content: const Text('退出后本地聊天、角色和设置不会被删除。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () async {
+              await _authService.logout();
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              _loadSession();
+            },
+            child: const Text('退出'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pullCloudSettings() async {
+    if (_session == null) {
+      await _openLogin();
+      if (_session == null) return;
+    }
+    setState(() => _syncingSettings = true);
+    try {
+      final settings = await _settingsSync.pullAiSettingsForCurrentUser();
+      if (!mounted) return;
+      _showSnack(settings == null ? '云端暂无模型配置' : '已拉取云端模型配置', backgroundColor: AppColors.success);
+    } catch (e) {
+      if (mounted) _showSnack(e.toString(), backgroundColor: AppColors.error);
+    } finally {
+      if (mounted) setState(() => _syncingSettings = false);
+    }
+  }
+
+  void _showSnack(String message, {Color? backgroundColor}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: backgroundColor));
   }
 }
 

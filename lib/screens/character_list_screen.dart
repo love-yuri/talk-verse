@@ -3,6 +3,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 import '../models/character.dart';
 import '../services/character_storage_service.dart';
+import '../services/role_card_sync_service.dart';
 import '../widgets/character_card.dart';
 import '../widgets/glass_header.dart';
 import 'character_detail_screen.dart';
@@ -17,8 +18,10 @@ class CharacterListScreen extends StatefulWidget {
 
 class _CharacterListScreenState extends State<CharacterListScreen> {
   final _storage = CharacterStorageService();
+  final _roleCardSync = RoleCardSyncService();
   List<Character> _characters = [];
   bool _loading = true;
+  bool _syncing = false;
 
   @override
   void initState() {
@@ -60,15 +63,18 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
       title: '发现',
       badge: '${_characters.length}',
       actions: [
+        GlassHeader.iconBtn(
+          _syncing ? Icons.sync_rounded : Icons.cloud_download_rounded,
+          onTap: _syncing ? null : _syncWebDavCharacter,
+        ),
+        const SizedBox(width: 10),
         GlassHeader.iconBtn(Icons.search_rounded, onTap: () {}),
       ],
     );
   }
 
   Widget _buildLoading() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.accent),
-    );
+    return const Center(child: CircularProgressIndicator(color: AppColors.accent));
   }
 
   Widget _buildGrid() {
@@ -81,7 +87,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.86,
+        childAspectRatio: 0.9,
       ),
       itemCount: _characters.length,
       itemBuilder: (context, i) {
@@ -91,17 +97,21 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
           direction: DismissDirection.endToStart,
           confirmDismiss: (_) async {
             return await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text('删除角色'),
-                content: Text('确定要删除「${character.name}」吗？'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除', style: TextStyle(color: AppColors.error))),
-                ],
-              ),
-            ) ?? false;
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('删除角色'),
+                    content: Text('确定要删除「${character.name}」吗？'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('删除', style: TextStyle(color: AppColors.error)),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false;
           },
           onDismissed: (_) {
             _storage.delete(character.id);
@@ -117,11 +127,7 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
             padding: const EdgeInsets.only(right: 20),
             child: const Icon(Icons.delete_outline, color: AppColors.error, size: 22),
           ),
-          child: CharacterCard(
-            character: character,
-            index: i,
-            onTap: () => _openDetail(character, i),
-          ),
+          child: CharacterCard(character: character, index: i, onTap: () => _openDetail(character, i)),
         );
       },
     );
@@ -134,9 +140,15 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
         children: [
           Text('✨', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
-          const Text('还没有角色', style: TextStyle(fontFamily: 'MapleMono', fontSize: 15, color: AppColors.textSecondary)),
+          const Text(
+            '还没有角色',
+            style: TextStyle(fontFamily: 'MapleMono', fontSize: 15, color: AppColors.textSecondary),
+          ),
           const SizedBox(height: 8),
-          const Text('点击右下角按钮创建第一个角色吧', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: AppColors.textTertiary)),
+          const Text(
+            '点击右下角按钮创建第一个角色吧',
+            style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: AppColors.textTertiary),
+          ),
         ],
       ),
     );
@@ -157,15 +169,35 @@ class _CharacterListScreenState extends State<CharacterListScreen> {
     _loadCharacters();
   }
 
+  Future<void> _syncWebDavCharacter() async {
+    if (_syncing) return;
+
+    setState(() => _syncing = true);
+    try {
+      final result = await _roleCardSync.syncRemoteToLocal();
+      await _loadCharacters();
+      if (!mounted) return;
+
+      _showSnack(
+        result.total == 0 ? '共享区暂无新角色' : '已同步 ${result.inserted} 个新角色，更新 ${result.updated} 个角色',
+        backgroundColor: AppColors.success,
+      );
+    } catch (e) {
+      print('同步角色卡失败: $e');
+      if (mounted) _showSnack(e.toString(), backgroundColor: AppColors.error);
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  void _showSnack(String message, {Color? backgroundColor}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: backgroundColor));
+  }
+
   void _addCharacter() async {
     final newChar = await Navigator.push<Character>(
       context,
-      MaterialPageRoute(
-        builder: (_) => CharacterEditScreen(
-          index: _characters.length,
-          isCreating: true,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => CharacterEditScreen(index: _characters.length, isCreating: true)),
     );
     if (newChar != null) {
       await _storage.save(newChar);

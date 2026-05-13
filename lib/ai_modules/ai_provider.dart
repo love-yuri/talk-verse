@@ -9,14 +9,6 @@ class AiTextEvent extends AiEvent {
   AiTextEvent(this.text);
 }
 
-/// 工具调用（流结束后一次性触发）
-class AiToolUseEvent extends AiEvent {
-  final String id;
-  final String name;
-  final Map<String, dynamic> input;
-  AiToolUseEvent({required this.id, required this.name, required this.input});
-}
-
 /// 单次请求的 Token 用量快照
 class TokenUsage {
   final int inputTokens;
@@ -43,7 +35,7 @@ abstract class AiProvider {
   /// [systemPrompt] 系统提示词（可选）
   Future<String> sendMessage(List<Message> messages, {String? systemPrompt});
 
-  /// 流式发送消息，逐段返回 AI 事件（文本片段或工具调用）
+  /// 流式发送消息，逐段返回 AI 文本事件
   Stream<AiEvent> sendMessageStream(List<Message> messages, {String? systemPrompt});
 
   /// 最近一次请求的 token 用量。流式完成后由子类填充。

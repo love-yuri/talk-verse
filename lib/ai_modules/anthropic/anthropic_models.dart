@@ -66,7 +66,6 @@ class AnthropicRequest {
   final String? system;
   final bool thinkingEnabled;
   final int thinkingBudgetTokens;
-  final List<Map<String, dynamic>>? tools;
   final double? temperature;
   final double? topP;
   final int? topK;
@@ -78,7 +77,6 @@ class AnthropicRequest {
     this.system,
     this.thinkingEnabled = false,
     this.thinkingBudgetTokens = 4000,
-    this.tools,
     this.temperature,
     this.topP,
     this.topK,
@@ -99,9 +97,6 @@ class AnthropicRequest {
         'type': 'enabled',
         'budget_tokens': thinkingBudgetTokens,
       };
-    }
-    if (tools != null && tools!.isNotEmpty) {
-      json['tools'] = tools;
     }
     return json;
   }

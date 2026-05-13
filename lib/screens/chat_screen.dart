@@ -147,7 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: AppColors.background,
       body: Column(children: [
         _buildAppBar(),
-        if (_sceneLocation != null && _sceneTime != null) _buildSceneHeader(),
+        if (_sceneLocation != null || _sceneTime != null) _buildSceneHeader(),
         Expanded(
           child: Stack(
             children: [
@@ -198,7 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Icon(Icons.place, size: 14, color: AppColors.accent.withValues(alpha: 0.7)),
             const SizedBox(width: 4),
             Text(
-              '$_sceneLocation · $_sceneTime',
+              [_sceneLocation, _sceneTime].where((s) => s != null && s.isNotEmpty).join(' · '),
               style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.accent.withValues(alpha: 0.8),
               ),
@@ -474,24 +474,28 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         if (event is AiTextEvent) {
           buffer.write(event.text);
+          // 解析场景标记（-time: 和 -loca:），从显示内容中移除
+          final rawText = buffer.toString();
+          final parsed = _parseSceneMarkers(rawText);
+          if (parsed.time != null || parsed.location != null) {
+            setState(() {
+              if (parsed.time != null) _sceneTime = parsed.time;
+              if (parsed.location != null) _sceneLocation = parsed.location;
+            });
+            if (parsed.time != null || parsed.location != null) {
+              _chatStorage.updateScene(
+                widget.session.id,
+                parsed.location ?? _sceneLocation ?? '',
+                parsed.time ?? _sceneTime ?? '',
+              );
+            }
+          }
           setState(() {
             final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing);
             if (idx != -1) {
-              _messages[idx] = _messages[idx].copyWith(content: buffer.toString());
+              _messages[idx] = _messages[idx].copyWith(content: parsed.displayText);
             }
           });
-        } else if (event is AiToolUseEvent) {
-          if (event.name == 'update_scene') {
-            final loc = event.input['location'] as String? ?? '';
-            final time = event.input['time'] as String? ?? '';
-            if (loc.isNotEmpty && time.isNotEmpty) {
-              setState(() {
-                _sceneLocation = loc;
-                _sceneTime = time;
-              });
-              _chatStorage.updateScene(widget.session.id, loc, time);
-            }
-          }
         }
       }).timeout(
         const Duration(minutes: 2),
@@ -501,15 +505,18 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => _isTyping = false);
 
-      // AI 只调了工具没输出文字时，移除空的 typing 消息
-      if (buffer.isEmpty) {
+      // 解析最终文本，移除场景标记
+      final finalParsed = _parseSceneMarkers(buffer.toString());
+      final finalContent = finalParsed.displayText;
+
+      if (finalContent.isEmpty) {
         setState(() {
           _messages.removeWhere((m) => m.type == MessageType.typing);
         });
       } else {
         final aiMsg = Message(
           id: 0,
-          content: buffer.toString(),
+          content: finalContent,
           type: MessageType.ai,
           timestamp: DateTime.now(),
         );
@@ -561,6 +568,39 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// 解析 AI 回复中的场景标记（-time: 和 -loca:），返回解析结果
+  _SceneParseResult _parseSceneMarkers(String text) {
+    String? time;
+    String? location;
+    final lines = text.split('\n');
+    final contentLines = <String>[];
+    bool headerEnded = false;
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (!headerEnded) {
+        if (trimmed.startsWith('-time:')) {
+          time = trimmed.substring(6).trim();
+          continue;
+        } else if (trimmed.startsWith('-loca:')) {
+          location = trimmed.substring(6).trim();
+          continue;
+        } else if (trimmed.isEmpty && (time != null || location != null)) {
+          // 标记结束的空行
+          headerEnded = true;
+          continue;
+        } else if (time == null && location == null) {
+          // 第一行不是标记，说明没有场景信息
+          headerEnded = true;
+        }
+      }
+      contentLines.add(line);
+    }
+
+    final displayText = contentLines.join('\n').trimLeft();
+    return _SceneParseResult(time: time, location: location, displayText: displayText);
+  }
+
   String? _buildSystemPrompt() {
     final character = _character;
     if (character == null) return null;
@@ -587,13 +627,18 @@ class _ChatScreenState extends State<ChatScreen> {
     '3. Established Facts Are Immutable: Events already confirmed in the conversation (leaving a place, obtaining an item, a character\'s death, etc.) are canon and must never be contradicted. '
     '4. Scene Transition Consistency: When the scene shifts from location A to location B, only characters present at location B should appear. Characters at location A must not suddenly appear at location B without explanation. '
     '5. Self-Check Before Replying: Before generating your reply, review the recent conversation to confirm the current scene, present characters, and key events that have occurred. Ensure your reply is consistent with all of this. '
-    '[场景追踪工具使用规则] '
-    '你有一个名为 update_scene 的工具，用于追踪当前场景信息。以下情况你必须调用此工具： '
+    '[场景追踪规则] '
+    '在每次回复的最开头，如果场景信息有变化，你需要用以下格式标记当前场景： '
+    '-time: 当前游戏内时间（使用中文时辰如"午时三刻"、"子时"等） '
+    '-loca: 当前所在地点 '
+    '每行一个标记，标记结束后空一行再开始正常回复内容。以下情况必须输出标记： '
     '1. 当场景从一个地点转移到另一个地点时（如从"宗门口"进入"练功房"）； '
     '2. 当对话中明确提到时间流逝时（如"午时已过"、"到了傍晚"）； '
-    '3. 每次回复开始时，如果场景与上一次不同，立即调用 update_scene。 '
-    'location 参数填写当前所在地点，time 参数填写当前游戏内时间（使用中文时辰如"午时三刻"、"子时"等）。 '
-    '你可以在回复文本的同时调用此工具，两者互不影响。';
+    '3. 每次回复开始时，如果场景与上一次不同，立即输出标记。 '
+    '示例格式： '
+    '-time: 午时三刻 '
+    '-loca: 练功房 '
+    '（空行后开始回复正文）';
   }
 
   void _showConfigDialog() {
@@ -823,24 +868,28 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         if (event is AiTextEvent) {
           buffer.write(event.text);
+          // 解析场景标记（-time: 和 -loca:），从显示内容中移除
+          final rawText = buffer.toString();
+          final parsed = _parseSceneMarkers(rawText);
+          if (parsed.time != null || parsed.location != null) {
+            setState(() {
+              if (parsed.time != null) _sceneTime = parsed.time;
+              if (parsed.location != null) _sceneLocation = parsed.location;
+            });
+            if (parsed.time != null || parsed.location != null) {
+              _chatStorage.updateScene(
+                widget.session.id,
+                parsed.location ?? _sceneLocation ?? '',
+                parsed.time ?? _sceneTime ?? '',
+              );
+            }
+          }
           setState(() {
             final idx = _messages.lastIndexWhere((m) => m.type == MessageType.typing);
             if (idx != -1) {
-              _messages[idx] = _messages[idx].copyWith(content: buffer.toString());
+              _messages[idx] = _messages[idx].copyWith(content: parsed.displayText);
             }
           });
-        } else if (event is AiToolUseEvent) {
-          if (event.name == 'update_scene') {
-            final loc = event.input['location'] as String? ?? '';
-            final time = event.input['time'] as String? ?? '';
-            if (loc.isNotEmpty && time.isNotEmpty) {
-              setState(() {
-                _sceneLocation = loc;
-                _sceneTime = time;
-              });
-              _chatStorage.updateScene(widget.session.id, loc, time);
-            }
-          }
         }
       }).timeout(
         const Duration(minutes: 2),
@@ -850,14 +899,18 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => _isTyping = false);
 
-      if (buffer.isEmpty) {
+      // 解析最终文本，移除场景标记
+      final finalParsed = _parseSceneMarkers(buffer.toString());
+      final finalContent = finalParsed.displayText;
+
+      if (finalContent.isEmpty) {
         setState(() {
           _messages.removeWhere((m) => m.type == MessageType.typing);
         });
       } else {
         final aiMsg = Message(
           id: 0,
-          content: buffer.toString(),
+          content: finalContent,
           type: MessageType.ai,
           timestamp: DateTime.now(),
         );
@@ -906,4 +959,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _msgCtrl.text = msg.content;
     _send();
   }
+}
+
+/// 场景标记解析结果
+class _SceneParseResult {
+  final String? time;
+  final String? location;
+  final String displayText;
+
+  const _SceneParseResult({this.time, this.location, required this.displayText});
 }

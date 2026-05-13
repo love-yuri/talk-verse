@@ -96,6 +96,7 @@ class _TapScaleState extends State<TapScale> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) { _ctrl.reverse(); widget.onTap?.call(); },
       onTapCancel: () => _ctrl.reverse(),

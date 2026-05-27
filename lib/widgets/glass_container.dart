@@ -23,7 +23,7 @@ class GlassContainer extends StatelessWidget {
     this.padding,
     this.margin,
     this.borderRadius,
-    this.blurAmount = 15.0,
+    this.blurAmount = 20.0,
     this.backgroundColor,
     this.border,
   });
@@ -41,9 +41,9 @@ class GlassContainer extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: backgroundColor ?? AppColors.surface,
+              color: backgroundColor ?? AppColors.surfaceGlass,
               borderRadius: borderRadius ?? BorderRadius.circular(12),
-              border: border ?? Border.all(color: AppColors.border, width: 0.5),
+              border: border ?? Border.all(color: AppColors.border.withValues(alpha: 0.8), width: 0.6),
             ),
             child: child,
           ),
@@ -61,7 +61,7 @@ class GlassDialog extends StatelessWidget {
   const GlassDialog({
     super.key,
     required this.child,
-    this.blurAmount = 15.0,
+    this.blurAmount = 20.0,
   });
 
   @override

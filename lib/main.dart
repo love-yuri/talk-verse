@@ -57,8 +57,42 @@ class TalkVerseApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.accent,
           brightness: Brightness.light,
+          surface: AppColors.surface,
         ),
         scaffoldBackgroundColor: AppColors.background,
+        cardColor: AppColors.surface,
+        dividerColor: AppColors.divider,
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: AppColors.textPrimary.withValues(alpha: 0.92),
+          contentTextStyle: const TextStyle(fontFamily: 'MapleMono', color: Colors.white, fontSize: 13),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.surfaceAlt,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.accent, width: 1.2),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
+        ),
         textTheme: const TextTheme(
           headlineLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: 0.35, height: 1.27),
           headlineMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.41, height: 1.29),

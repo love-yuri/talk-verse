@@ -1,7 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
-/// 简洁白背景
+/// 淡雅渐变背景
 class WarmBackground extends StatelessWidget {
   final Widget child;
   const WarmBackground({super.key, required this.child});
@@ -9,13 +10,13 @@ class WarmBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.background,
+      decoration: const BoxDecoration(gradient: AppColors.softBackgroundGradient),
       child: child,
     );
   }
 }
 
-/// 简洁白卡片
+/// 轻玻璃卡片
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -35,20 +36,23 @@ class GlassCard extends StatelessWidget {
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceGlass,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: AppColors.border, width: 0.5),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 1))],
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8), width: 0.6),
+        boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 18, offset: const Offset(0, 8))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
+        ),
       ),
     );
   }
 }
 
-/// 输入框容器（纯色边框）
+/// 输入框容器（柔和边框）
 class WarmGradientBorder extends StatelessWidget {
   final Widget child;
   final double borderRadius;
@@ -59,9 +63,10 @@ class WarmGradientBorder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceOverlay,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: child,
     );

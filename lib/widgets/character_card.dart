@@ -26,14 +26,14 @@ class CharacterCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceGlass,
           borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-          border: Border.all(color: const Color(0xFFF0E6F6), width: 0.5),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.8), width: 0.6),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.15),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: color.withValues(alpha: 0.14),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -51,11 +51,11 @@ class CharacterCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [color.withValues(alpha: 0.35), color.withValues(alpha: 0.1)],
+                    colors: [color.withValues(alpha: 0.45), AppColors.surface.withValues(alpha: 0.75)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.2),
+                      color: color.withValues(alpha: 0.18),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),

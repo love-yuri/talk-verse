@@ -53,6 +53,14 @@ class ChatStorageService {
     await db.delete('sessions', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// 批量删除会话
+  Future<void> deleteSessions(List<int> ids) async {
+    if (ids.isEmpty) return;
+    final db = DatabaseHelper().db;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.rawDelete('DELETE FROM sessions WHERE id IN ($placeholders)', ids);
+  }
+
   /// 更新会话的场景信息
   Future<void> updateScene(int sessionId, String location, String time) async {
     final db = DatabaseHelper().db;

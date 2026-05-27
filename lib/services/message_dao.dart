@@ -31,6 +31,7 @@ class MessageDao {
       'timestamp': msg.timestamp.toIso8601String(),
       'is_read': msg.isRead ? 1 : 0,
       'status': msg.status.name,
+      'is_error': msg.isError ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -43,6 +44,7 @@ class MessageDao {
       'timestamp': msg.timestamp.toIso8601String(),
       'is_read': msg.isRead ? 1 : 0,
       'status': msg.status.name,
+      'is_error': msg.isError ? 1 : 0,
     }, where: 'id = ?', whereArgs: [msg.id]);
   }
 
@@ -50,6 +52,14 @@ class MessageDao {
   Future<void> deleteMessage(int msgId) async {
     final db = DatabaseHelper().db;
     await db.delete('messages', where: 'id = ?', whereArgs: [msgId]);
+  }
+
+  /// 批量删除消息
+  Future<void> deleteMessages(List<int> msgIds) async {
+    if (msgIds.isEmpty) return;
+    final db = DatabaseHelper().db;
+    final placeholders = List.filled(msgIds.length, '?').join(',');
+    await db.rawDelete('DELETE FROM messages WHERE id IN ($placeholders)', msgIds);
   }
 
   /// 清空指定会话的所有消息
@@ -72,6 +82,7 @@ class MessageDao {
         (e) => e.name == r['status'],
         orElse: () => MessageStatus.sent,
       ),
+      isError: (r['is_error'] as int?) == 1,
     );
   }
 }

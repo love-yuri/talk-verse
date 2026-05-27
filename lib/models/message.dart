@@ -7,6 +7,7 @@ class Message {
   final DateTime timestamp;
   final bool isRead;
   final MessageStatus status;
+  final bool isError;
 
   Message({
     required this.id,
@@ -15,6 +16,7 @@ class Message {
     required this.timestamp,
     this.isRead = false,
     this.status = MessageStatus.sent,
+    this.isError = false,
   });
 
   /// 从JSON创建消息对象
@@ -32,6 +34,7 @@ class Message {
         (e) => e.name == json['status'],
         orElse: () => MessageStatus.sent,
       ),
+      isError: json['isError'] as bool? ?? false,
     );
   }
 
@@ -44,6 +47,7 @@ class Message {
       'timestamp': timestamp.toIso8601String(),
       'isRead': isRead,
       'status': status.name,
+      'isError': isError,
     };
   }
 
@@ -55,6 +59,7 @@ class Message {
     DateTime? timestamp,
     bool? isRead,
     MessageStatus? status,
+    bool? isError,
   }) {
     return Message(
       id: id ?? this.id,
@@ -63,6 +68,7 @@ class Message {
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
       status: status ?? this.status,
+      isError: isError ?? this.isError,
     );
   }
 }

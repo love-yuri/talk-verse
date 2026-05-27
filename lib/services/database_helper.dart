@@ -36,7 +36,7 @@ class DatabaseHelper {
     _db = await databaseFactory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 7,
+        version: 8,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -71,6 +71,7 @@ class DatabaseHelper {
         timestamp TEXT NOT NULL,
         is_read INTEGER DEFAULT 0,
         status TEXT DEFAULT 'sent',
+        is_error INTEGER DEFAULT 0,
         FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
       )
     ''');
@@ -115,13 +116,10 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_character_sync_remote_id ON character_sync_meta(remote_id)');
   }
 
-  /// 升级：直接 DROP 重建，不写迁移兼容代码
+  /// 升级：逐版本迁移
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    await db.execute('DROP TABLE IF EXISTS character_sync_meta');
-    await db.execute('DROP TABLE IF EXISTS token_records');
-    await db.execute('DROP TABLE IF EXISTS messages');
-    await db.execute('DROP TABLE IF EXISTS sessions');
-    await db.execute('DROP TABLE IF EXISTS characters');
-    await _onCreate(db, newVersion);
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE messages ADD COLUMN is_error INTEGER DEFAULT 0');
+    }
   }
 }

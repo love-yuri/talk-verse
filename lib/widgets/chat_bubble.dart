@@ -15,6 +15,7 @@ class ChatBubble extends StatefulWidget {
   final ValueChanged<String>? onEditConfirm;
   final VoidCallback? onResend;
   final VoidCallback? onDelete;
+  final VoidCallback? onBatchSelect;
 
   const ChatBubble({
     super.key,
@@ -27,6 +28,7 @@ class ChatBubble extends StatefulWidget {
     this.onEditConfirm,
     this.onResend,
     this.onDelete,
+    this.onBatchSelect,
   });
 
   @override
@@ -88,8 +90,9 @@ class _ChatBubbleState extends State<ChatBubble> {
   Widget _buildInlineMenu(bool isUser) {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
         children: [
           _menuBtn(Icons.edit, '编辑', () {
             setState(() => _isEditing = true);
@@ -107,31 +110,31 @@ class _ChatBubbleState extends State<ChatBubble> {
           _menuBtn(Icons.delete_outline, '删除', () {
             widget.onDelete?.call();
           }),
+          _menuBtn(Icons.checklist, '多选', () {
+            widget.onBatchSelect?.call();
+          }),
         ],
       ),
     );
   }
 
   Widget _menuBtn(IconData icon, String label, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5EFF8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border, width: 0.5),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: const Color(0xFF9B7BB8)),
-              const SizedBox(width: 4),
-              Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF9B7BB8))),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border, width: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.accent),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.accent)),
+          ],
         ),
       ),
     );
@@ -186,7 +189,7 @@ class _ChatBubbleState extends State<ChatBubble> {
       decoration: BoxDecoration(
         color: isUser ? AppColors.bubbleUser : AppColors.bubbleAI,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF9B7BB8), width: 1.5),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.55), width: 1.2),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -239,7 +242,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w400,
-            color: isPrimary ? const Color(0xFF9B7BB8) : AppColors.textSecondary,
+            color: isPrimary ? AppColors.accent : AppColors.textSecondary,
           ),
         ),
       ),
@@ -253,11 +256,7 @@ class _ChatBubbleState extends State<ChatBubble> {
         width: 38,
         height: 38,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8B4F8), Color(0xFFB4D0F8)],
-          ),
+          gradient: AppColors.primaryGradient,
         ),
         padding: const EdgeInsets.all(2),
         child: ClipRRect(
@@ -273,38 +272,49 @@ class _ChatBubbleState extends State<ChatBubble> {
   }
 
   Widget _bubble(bool isUser) {
+    final isError = widget.message.isError;
     return Container(
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 2 / 3),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
-        color: isUser ? AppColors.bubbleUser : AppColors.bubbleAI,
+        color: isUser ? null : AppColors.bubbleAI,
+        gradient: isUser ? AppColors.primaryGradient : null,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
           bottomLeft: Radius.circular(isUser ? 16 : 4),
           bottomRight: Radius.circular(isUser ? 4 : 16),
         ),
+        border: isUser ? null : Border.all(color: AppColors.border.withValues(alpha: 0.7), width: 0.6),
         boxShadow: [
           BoxShadow(
-            color: isUser
-                ? const Color(0xFFD4BBFF).withValues(alpha: 0.3)
-                : AppColors.shadow,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: isUser ? AppColors.accent.withValues(alpha: 0.18) : AppColors.cardShadow,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: isUser
           ? Text(widget.message.content, style: AppTextStyles.chatMessageUser)
-          : _buildRichContent(widget.message.content),
+          : _buildRichContent(widget.message.content, isError: isError),
     );
   }
 
-  /// 解析AI消息中的""引号内容并高亮显示
-  Widget _buildRichContent(String text) {
+  /// 解析AI消息中的””引号内容并高亮显示
+  Widget _buildRichContent(String text, {bool isError = false}) {
+    final baseStyle = isError
+        ? AppTextStyles.chatMessage.copyWith(color: AppColors.error)
+        : AppTextStyles.chatMessage;
+
+    if (isError) {
+      return RichText(
+        text: TextSpan(style: baseStyle, children: [TextSpan(text: text)]),
+      );
+    }
+
     final spans = <TextSpan>[];
-    final regex = RegExp('“(.*?)”');
+    final regex = RegExp('”(.*?)”');
     int lastEnd = 0;
 
     for (final match in regex.allMatches(text)) {
@@ -312,9 +322,9 @@ class _ChatBubbleState extends State<ChatBubble> {
         spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
       }
       spans.add(TextSpan(
-        text: '“${match.group(1)!}”',
+        text: '”${match.group(1)!}”',
         style: const TextStyle(
-          color: Color(0xFF9C27B0),
+          color: AppColors.accent,
           fontWeight: FontWeight.w600,
         ),
       ));
@@ -329,7 +339,7 @@ class _ChatBubbleState extends State<ChatBubble> {
 
     return RichText(
       text: TextSpan(
-        style: AppTextStyles.chatMessage,
+        style: baseStyle,
         children: spans,
       ),
     );

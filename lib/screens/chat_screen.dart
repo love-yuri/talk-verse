@@ -49,6 +49,8 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _sceneTime;
   bool _userScrolling = false;
   bool _showScrollToBottom = false;
+  bool _isSelectionMode = false;
+  final Set<int> _selectedMsgIds = {};
 
   @override
   void initState() {
@@ -161,7 +163,11 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
-        if (!_loadingMessages) _buildInput(),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          child: _isSelectionMode ? _buildSelectionBar() : (!_loadingMessages ? _buildInput() : const SizedBox.shrink()),
+        ),
       ]),
     );
   }
@@ -187,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.08),
+          color: AppColors.accentLight.withValues(alpha: 0.55),
           border: const Border(
             bottom: BorderSide(color: AppColors.border, width: 0.5),
           ),
@@ -212,74 +218,120 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildAppBar() {
     return Container(
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.chatAppBarStart, AppColors.chatAppBarMid, AppColors.chatAppBarEnd],
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: AppColors.headerGradient),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(children: [
           TapScale(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Hero(
-            tag: widget.heroTag ?? 'avatar_${widget.session.characterId}',
-            transitionOnUserGestures: true,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(19),
+            onTap: _isSelectionMode ? _exitSelectionMode : () => Navigator.pop(context),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
               child: Container(
-                width: 38,
-                height: 38,
+                key: ValueKey(_isSelectionMode),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Image.asset(
-                  widget.session.characterAvatar,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Colors.white70),
+                child: Icon(
+                  _isSelectionMode ? Icons.close : Icons.arrow_back_ios_new,
+                  size: 16,
+                  color: Colors.white,
                 ),
               ),
             ),
           ),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.session.characterName,
-                style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.24),
-              ),
-              Text(
-                _isTyping ? '正在输入...' : '在线 ♡',
-                style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 0.07),
-              ),
-            ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            child: _isSelectionMode
+                ? const SizedBox.shrink()
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Hero(
+                        tag: widget.heroTag ?? 'avatar_${widget.session.characterId}',
+                        transitionOnUserGestures: true,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(19),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                            child: Image.asset(
+                              widget.session.characterAvatar,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Colors.white70),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                  ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: child,
+            ),
+            child: Column(
+              key: ValueKey(_isSelectionMode),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isSelectionMode ? '已选 ${_selectedMsgIds.length} 条' : widget.session.characterName,
+                  style: const TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.24),
+                ),
+                if (!_isSelectionMode)
+                  Text(
+                    _isTyping ? '正在输入...' : '在线 ♡',
+                    style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w400, color: Colors.white.withValues(alpha: 0.8), letterSpacing: 0.07),
+                  ),
+              ],
+            ),
           ),
           const Spacer(),
-          TapScale(
-            onTap: () => _showChatSettings(),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.more_vert, size: 18, color: Colors.white),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) => ScaleTransition(
+              scale: anim,
+              child: child,
             ),
+            child: _isSelectionMode
+                ? TapScale(
+                    key: const ValueKey('select_all'),
+                    onTap: _toggleSelectAll,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _selectedMsgIds.length == _messages.where((m) => m.type != MessageType.typing).length ? '取消全选' : '全选',
+                        style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: Colors.white),
+                      ),
+                    ),
+                  )
+                : TapScale(
+                    key: const ValueKey('more'),
+                    onTap: () => _showChatSettings(),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.more_vert, size: 18, color: Colors.white),
+                    ),
+                  ),
           ),
         ]),
       ),
@@ -331,7 +383,9 @@ class _ChatScreenState extends State<ChatScreen> {
           final showTime = i == 0 || msg.timestamp.difference(_messages[i - 1].timestamp).inMinutes > 5;
           final isLast = i == _messages.length - 1;
           final isFailed = msg.status == MessageStatus.failed;
-          return Column(children: [
+          final isSelected = _selectedMsgIds.contains(msg.id);
+
+          Widget bubble = Column(children: [
             if (showTime) _timeDivider(msg.timestamp),
             ChatBubble(
               message: msg,
@@ -339,12 +393,47 @@ class _ChatScreenState extends State<ChatScreen> {
               characterName: widget.session.characterName,
               isLast: isLast,
               isMenuActive: _activeMenuMsgId == msg.id,
-              onLongPress: () => setState(() => _activeMenuMsgId = msg.id),
+              onLongPress: _isSelectionMode
+                  ? () => _toggleMsgSelect(msg.id)
+                  : () => setState(() => _activeMenuMsgId = msg.id),
               onEditConfirm: (newContent) => _updateMessage(i, newContent),
               onResend: isLast ? () => _handleResend(i) : (isFailed ? () => _resendMessage(i) : null),
               onDelete: () => _deleteMessage(i),
+              onBatchSelect: () => _enterSelectionMode(msg.id),
             ),
           ]);
+
+          if (msg.type != MessageType.typing) {
+            bubble = GestureDetector(
+              onTap: _isSelectionMode ? () => _toggleMsgSelect(msg.id) : null,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    child: _isSelectionMode
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 16, right: 6),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(
+                                isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                                key: ValueKey('$isSelected-${msg.id}'),
+                                size: 20,
+                                color: isSelected ? AppColors.accent : AppColors.textTertiary,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  Expanded(child: bubble),
+                ],
+              ),
+            );
+          }
+
+          return bubble;
         },
       ),
     );
@@ -356,12 +445,12 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFFE8D8F0),
+          color: AppColors.accentLight.withValues(alpha: 0.72),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
           AppDateUtils.formatChatTime(t),
-          style: AppTextStyles.chatTime.copyWith(color: const Color(0xFF9B7BB8)),
+          style: AppTextStyles.chatTime.copyWith(color: AppColors.accent),
         ),
       ),
     );
@@ -384,13 +473,14 @@ class _ChatScreenState extends State<ChatScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surfaceOverlay,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.7), width: 0.6),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: AppColors.cardShadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -430,12 +520,18 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollAfterFrame();
 
     if (_aiProvider == null) {
-      final failedMsg = userMsg.copyWith(id: userMsgId, status: MessageStatus.failed);
+      final errorMsg = Message(
+        id: 0,
+        content: '未配置 API Key，请在设置中配置后重试',
+        type: MessageType.ai,
+        timestamp: DateTime.now(),
+        isError: true,
+      );
+      final errorId = await _messageDao.insertMessage(widget.session.id, errorMsg);
       setState(() {
-        final idx = _messages.indexWhere((m) => m.id == userMsgId);
-        if (idx != -1) _messages[idx] = failedMsg;
+        _messages.add(errorMsg.copyWith(id: errorId));
       });
-      await _messageDao.updateMessage(failedMsg);
+      _scrollAfterFrame();
       _showConfigDialog();
       return;
     }
@@ -548,22 +644,27 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
+      // 提取错误信息
+      String errorText = e.toString();
+      if (errorText.startsWith('Exception: ')) {
+        errorText = errorText.substring(11);
+      }
+
+      final errorMsg = Message(
+        id: 0,
+        content: errorText,
+        type: MessageType.ai,
+        timestamp: DateTime.now(),
+        isError: true,
+      );
+      final errorId = await _messageDao.insertMessage(widget.session.id, errorMsg);
+
       setState(() {
         _messages.removeWhere((m) => m.type == MessageType.typing);
-        final lastUserIdx = _messages.lastIndexWhere(
-          (m) => m.type == MessageType.user && m.id == userMsgId,
-        );
-        if (lastUserIdx != -1) {
-          _messages[lastUserIdx] = _messages[lastUserIdx].copyWith(
-            status: MessageStatus.failed,
-          );
-        }
+        _messages.add(errorMsg.copyWith(id: errorId));
         _isTyping = false;
       });
-      final failedIdx = _messages.lastIndexWhere((m) => m.id == userMsgId);
-      if (failedIdx != -1) {
-        await _messageDao.updateMessage(_messages[failedIdx]);
-      }
       _scrollAfterFrame();
     }
   }
@@ -731,6 +832,144 @@ class _ChatScreenState extends State<ChatScreen> {
       _activeMenuMsgId = null;
     });
     _messageDao.deleteMessage(msgId);
+  }
+
+  // ---- 批量选择 ----
+
+  void _enterSelectionMode(int msgId) {
+    setState(() {
+      _isSelectionMode = true;
+      _activeMenuMsgId = null;
+      _selectedMsgIds.add(msgId);
+    });
+  }
+
+  void _toggleMsgSelect(int id) {
+    setState(() {
+      if (_selectedMsgIds.contains(id)) {
+        _selectedMsgIds.remove(id);
+        if (_selectedMsgIds.isEmpty) _isSelectionMode = false;
+      } else {
+        _selectedMsgIds.add(id);
+      }
+    });
+  }
+
+  void _toggleSelectAll() {
+    setState(() {
+      final selectable = _messages.where((m) => m.type != MessageType.typing).toList();
+      if (_selectedMsgIds.length == selectable.length) {
+        _selectedMsgIds.clear();
+      } else {
+        _selectedMsgIds.addAll(selectable.map((m) => m.id));
+      }
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedMsgIds.clear();
+    });
+  }
+
+  Future<void> _deleteSelectedMessages() async {
+    if (_selectedMsgIds.isEmpty) return;
+    final ids = _selectedMsgIds.toList();
+    await _messageDao.deleteMessages(ids);
+    setState(() {
+      _messages.removeWhere((m) => ids.contains(m.id));
+      _isSelectionMode = false;
+      _selectedMsgIds.clear();
+    });
+    _scrollAfterFrame();
+  }
+
+  void _showDeleteMessagesConfirm() {
+    if (_selectedMsgIds.isEmpty) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('确认删除'),
+        content: Text('确定删除选中的 ${_selectedMsgIds.length} 条消息？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () { Navigator.pop(ctx); _deleteSelectedMessages(); },
+            child: const Text('删除', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionBar() {
+    final hasSelection = _selectedMsgIds.isNotEmpty;
+    return Container(
+      padding: EdgeInsets.only(
+        left: 16, right: 16, top: 10,
+        bottom: MediaQuery.of(context).padding.bottom + 10,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, -4)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: _exitSelectionMode,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+                    SizedBox(width: 6),
+                    Text('取消', style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: GestureDetector(
+              onTap: hasSelection ? _showDeleteMessagesConfirm : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: hasSelection ? AppColors.error.withValues(alpha: 0.1) : AppColors.textTertiary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasSelection ? AppColors.error.withValues(alpha: 0.3) : AppColors.textTertiary.withValues(alpha: 0.2),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.delete_outline, size: 18, color: hasSelection ? AppColors.error : AppColors.textTertiary),
+                    const SizedBox(width: 6),
+                    Text(
+                      hasSelection ? '删除 (${_selectedMsgIds.length})' : '删除',
+                      style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: hasSelection ? AppColors.error : AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _editCharacterFromSettings() {
@@ -942,8 +1181,25 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
+      // 提取错误信息
+      String errorText = e.toString();
+      if (errorText.startsWith('Exception: ')) {
+        errorText = errorText.substring(11);
+      }
+
+      final errorMsg = Message(
+        id: 0,
+        content: errorText,
+        type: MessageType.ai,
+        timestamp: DateTime.now(),
+        isError: true,
+      );
+      final errorId = await _messageDao.insertMessage(widget.session.id, errorMsg);
+
       setState(() {
         _messages.removeWhere((m) => m.type == MessageType.typing);
+        _messages.add(errorMsg.copyWith(id: errorId));
         _isTyping = false;
       });
       _scrollAfterFrame();

@@ -39,9 +39,10 @@ class _ChatInputState extends State<ChatInput> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceGlass,
+        border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.7), width: 0.6)),
         boxShadow: [
-          BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, -4)),
+          BoxShadow(color: AppColors.cardShadow, blurRadius: 16, offset: const Offset(0, -6)),
         ],
       ),
       padding: EdgeInsets.only(left: 10, right: 10, top: 6, bottom: MediaQuery.of(context).padding.bottom + 6),
@@ -73,24 +74,25 @@ class _ChatInputState extends State<ChatInput> {
   Widget _inputField() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5EFF8),
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8), width: 0.6),
       ),
       child: TextField(
         controller: widget.controller,
         maxLines: null,
-        textInputAction: TextInputAction.newline,
+        textInputAction: TextInputAction.send,
         style: AppTextStyles.input,
         decoration: InputDecoration(
           hintText: '输入消息... ♡',
-          hintStyle: AppTextStyles.inputHint.copyWith(color: const Color(0xFFC4B0D9)),
+          hintStyle: AppTextStyles.inputHint.copyWith(color: AppColors.textMuted),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           suffix: TapScale(
             onTap: _insertParen,
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 16, color: Color(0xFFC4B0D9))),
+              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 16, color: AppColors.textMuted)),
             ),
           ),
         ),
@@ -106,11 +108,7 @@ class _ChatInputState extends State<ChatInput> {
         width: 38,
         height: 38,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8B4F8), Color(0xFFD4BBFF)],
-          ),
+          gradient: AppColors.primaryGradient,
           shape: BoxShape.circle,
         ),
         child: const Icon(Icons.send_rounded, size: 18, color: Colors.white),

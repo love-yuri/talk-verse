@@ -175,7 +175,12 @@ class _CharacterEditScreenState extends State<CharacterEditScreen> {
               decoration: const InputDecoration(
                 hintText: '请输入角色名称',
                 hintStyle: TextStyle(fontFamily: 'MapleMono', fontSize: 13, color: AppColors.textTertiary),
+                filled: false,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 isDense: true,
               ),

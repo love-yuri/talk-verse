@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../ai_modules/ai_provider.dart';
 import '../ai_modules/anthropic/anthropic_provider.dart';
@@ -262,11 +264,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.3),
                             ),
-                            child: Image.asset(
-                              widget.session.characterAvatar,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Colors.white70),
-                            ),
+                            child: widget.session.characterAvatar.startsWith('/')
+                                ? Image.file(File(widget.session.characterAvatar), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, size: 20, color: Colors.white70))
+                                : Image.asset(widget.session.characterAvatar, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, size: 20, color: Colors.white70)),
                           ),
                         ),
                       ),

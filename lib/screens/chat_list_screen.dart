@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
@@ -286,11 +288,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         colors: [color.withValues(alpha: 0.42), AppColors.surface.withValues(alpha: 0.75)],
                       ),
                     ),
-                    child: Image.asset(
-                      session.characterAvatar,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 26, color: Colors.grey),
-                    ),
+                    child: session.characterAvatar.startsWith('/')
+                        ? Image.file(File(session.characterAvatar), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, size: 26, color: Colors.grey))
+                        : Image.asset(session.characterAvatar, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, size: 26, color: Colors.grey)),
                   ),
                 ),
               ),

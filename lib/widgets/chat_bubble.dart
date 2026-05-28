@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
@@ -250,6 +252,7 @@ class _ChatBubbleState extends State<ChatBubble> {
   }
 
   Widget _avatar(String avatarPath) {
+    final fallback = const Icon(Icons.person, size: 18, color: Colors.grey);
     return ClipRRect(
       borderRadius: BorderRadius.circular(19),
       child: Container(
@@ -261,11 +264,9 @@ class _ChatBubbleState extends State<ChatBubble> {
         padding: const EdgeInsets.all(2),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(17),
-          child: Image.asset(
-            avatarPath,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 18, color: Colors.grey),
-          ),
+          child: avatarPath.startsWith('/')
+              ? Image.file(File(avatarPath), fit: BoxFit.cover, errorBuilder: (c, e, s) => fallback)
+              : Image.asset(avatarPath, fit: BoxFit.cover, errorBuilder: (c, e, s) => fallback),
         ),
       ),
     );

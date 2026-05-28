@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
@@ -101,11 +103,7 @@ class CharacterDetailScreen extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                child: Image.asset(
-                  character.avatar,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(Icons.person, size: 50, color: color.withValues(alpha: 0.6)),
-                ),
+                child: _buildAvatar(context, color),
               ),
             ),
           ),
@@ -234,6 +232,22 @@ class CharacterDetailScreen extends StatelessWidget {
       onCharacterUpdated?.call(updated);
       Navigator.pop(context);
     }
+  }
+
+  Widget _buildAvatar(BuildContext context, Color color) {
+    final fallback = Icon(Icons.person, size: 50, color: color.withValues(alpha: 0.6));
+    if (character.avatar.startsWith('/')) {
+      return Image.file(
+        File(character.avatar),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      );
+    }
+    return Image.asset(
+      character.avatar,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => fallback,
+    );
   }
 
   void _confirmDelete(BuildContext context) {

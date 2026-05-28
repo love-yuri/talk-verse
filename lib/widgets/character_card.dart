@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
@@ -62,11 +64,7 @@ class CharacterCard extends StatelessWidget {
                   ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(
-                    character.avatar,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(Icons.person, size: 36, color: color.withValues(alpha: 0.6)),
-                  ),
+                  child: _buildAvatar(character.avatar, 36, color),
                 ),
               ),
             ),
@@ -78,6 +76,22 @@ class CharacterCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAvatar(String path, double fallbackIconSize, Color color) {
+    final fallback = Icon(Icons.person, size: fallbackIconSize, color: color.withValues(alpha: 0.6));
+    if (path.startsWith('/')) {
+      return Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      );
+    }
+    return Image.asset(
+      path,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => fallback,
     );
   }
 }

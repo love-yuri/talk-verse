@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
 import '../models/character.dart';
+import '../services/character_import_service.dart';
 import '../services/character_storage_service.dart';
 import '../services/role_card_sync_service.dart';
 import '../widgets/character_card.dart';
@@ -242,6 +243,36 @@ class _CharacterListScreenState extends State<CharacterListScreen>
     }
   }
 
+  Future<void> _importCharacter() async {
+    try {
+      final result = await CharacterImportService.importFromFile();
+      if (result == null || !mounted) return;
+
+      // 跳转编辑页让用户确认/修改
+      final newChar = await Navigator.push<Character>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CharacterEditScreen(
+            character: result.character,
+            index: _totalCount,
+            isCreating: true,
+          ),
+        ),
+      );
+
+      if (newChar != null) {
+        await _storage.save(newChar);
+        if (mounted) {
+          _loadCharacters();
+          _showSnack('已导入「${newChar.name}」', backgroundColor: AppColors.success);
+        }
+      }
+    } catch (e) {
+      debugPrint('导入角色卡失败: $e');
+      if (mounted) _showSnack('导入失败：$e', backgroundColor: AppColors.error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -289,6 +320,8 @@ class _CharacterListScreenState extends State<CharacterListScreen>
       title: '发现',
       badge: '$_totalCount',
       actions: [
+        GlassHeader.iconBtn(Icons.image_outlined, onTap: _importCharacter),
+        const SizedBox(width: 10),
         GlassHeader.iconBtn(
           _syncing ? Icons.sync_rounded : Icons.cloud_download_rounded,
           onTap: _syncing ? null : _syncWebDavCharacter,

@@ -15,6 +15,41 @@ class TokenUsageService {
     return rows.map(_rowToRecord).toList();
   }
 
+  /// 分页加载 Token 记录（懒加载）
+  Future<List<TokenRecord>> loadPage({int limit = 30, int offset = 0}) async {
+    final db = DatabaseHelper().db;
+    final rows = await db.query(
+      'token_records',
+      orderBy: 'timestamp DESC',
+      limit: limit,
+      offset: offset,
+    );
+    return rows.map(_rowToRecord).toList();
+  }
+
+  /// 加载聚合统计信息
+  Future<TokenUsageSummary> loadSummary() async {
+    final db = DatabaseHelper().db;
+    final rows = await db.rawQuery('''
+      SELECT
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(cache_read_tokens), 0) AS cache_read_tokens,
+        COALESCE(SUM(cache_create_tokens), 0) AS cache_create_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COUNT(1) AS record_count
+      FROM token_records
+    ''');
+
+    final row = rows.first;
+    return TokenUsageSummary(
+      inputTokens: (row['input_tokens'] as num?)?.toInt() ?? 0,
+      cacheReadTokens: (row['cache_read_tokens'] as num?)?.toInt() ?? 0,
+      cacheCreateTokens: (row['cache_create_tokens'] as num?)?.toInt() ?? 0,
+      outputTokens: (row['output_tokens'] as num?)?.toInt() ?? 0,
+      recordCount: (row['record_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   /// 添加一条 Token 记录
   Future<void> addRecord(TokenRecord record) async {
     final db = DatabaseHelper().db;
@@ -61,4 +96,32 @@ class TokenUsageService {
       model: r['model'] as String,
     );
   }
+}
+
+/// Token 用量聚合数据
+class TokenUsageSummary {
+  final int inputTokens;
+  final int cacheReadTokens;
+  final int cacheCreateTokens;
+  final int outputTokens;
+  final int recordCount;
+
+  const TokenUsageSummary({
+    required this.inputTokens,
+    required this.cacheReadTokens,
+    required this.cacheCreateTokens,
+    required this.outputTokens,
+    required this.recordCount,
+  });
+
+  int get totalTokens =>
+      inputTokens + cacheReadTokens + cacheCreateTokens + outputTokens;
+
+  static const empty = TokenUsageSummary(
+    inputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreateTokens: 0,
+    outputTokens: 0,
+    recordCount: 0,
+  );
 }

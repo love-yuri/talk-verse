@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../constants/app_colors.dart';
 import '../models/token_record.dart';
 import '../services/token_usage_service.dart';
 import '../utils/date_utils.dart';
-import '../widgets/warm_background.dart';
+import '../widgets/glass_header.dart';
 
 class TokenUsageScreen extends StatefulWidget {
   const TokenUsageScreen({super.key});
@@ -13,21 +14,70 @@ class TokenUsageScreen extends StatefulWidget {
 }
 
 class _TokenUsageScreenState extends State<TokenUsageScreen> {
-  List<TokenRecord> _records = [];
+  static const int _pageSize = 24;
+
+  final _service = TokenUsageService();
+  final _scrollCtrl = ScrollController();
+
+  final List<TokenRecord> _records = [];
+  TokenUsageSummary _summary = TokenUsageSummary.empty;
+
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _offset = 0;
 
   @override
   void initState() {
     super.initState();
+    _scrollCtrl.addListener(_handleScroll);
     _load();
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (_loadingMore || !_hasMore) return;
+    final position = _scrollCtrl.position;
+    if (position.maxScrollExtent - position.pixels <= 180) {
+      _loadMore();
+    }
+  }
+
   Future<void> _load() async {
-    final records = await TokenUsageService().load();
+    final summary = await _service.loadSummary();
+    final firstPage = await _service.loadPage(limit: _pageSize, offset: 0);
+
     if (!mounted) return;
+
     setState(() {
-      _records = records;
+      _summary = summary;
+      _records
+        ..clear()
+        ..addAll(firstPage);
+      _offset = firstPage.length;
+      _hasMore = _offset < _summary.recordCount;
       _loading = false;
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || !_hasMore) return;
+
+    setState(() => _loadingMore = true);
+
+    final next = await _service.loadPage(limit: _pageSize, offset: _offset);
+    if (!mounted) return;
+
+    setState(() {
+      _records.addAll(next);
+      _offset = _records.length;
+      _hasMore = _offset < _summary.recordCount;
+      _loadingMore = false;
     });
   }
 
@@ -35,64 +85,119 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(children: [
-        _buildAppBar(),
-        if (_loading)
-          const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent)))
-        else if (_records.isEmpty)
-          Expanded(child: _buildEmpty())
-        else
-          Expanded(child: _buildContent()),
-      ]),
+      body: Column(
+        children: [
+          _buildAppBar(),
+          if (_loading)
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.accent,
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: RefreshIndicator(onRefresh: _load, child: _buildContent()),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildAppBar() {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF9B7BB8), Color(0xFFB4A0D4), Color(0xFFD4BBFF)],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(children: [
-          TapScale(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(10),
+    return GlassHeader(
+      leading: GlassHeader.iconBtn(Icons.arrow_back_ios_new, onTap: () => Navigator.pop(context)),
+      subtitle: '统计',
+      title: 'Token 用量',
+      badge: '${_summary.recordCount}',
+      actions: [
+        GlassHeader.iconBtn(Icons.delete_outline, onTap: _confirmClear),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    return ListView.builder(
+      controller: _scrollCtrl,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      itemBuilder: (context, index) {
+        if (index == 0) return _buildSummaryCard();
+
+        if (index == 1) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 10),
+            child: Row(
+              children: [
+                const Text(
+                  '请求记录',
+                  style: TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${_summary.recordCount} 次',
+                  style: const TextStyle(
+                    fontFamily: 'MapleMono',
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (_records.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 30),
+            child: _buildEmpty(),
+          );
+        }
+
+        final recordIndex = index - 2;
+        if (recordIndex < _records.length) {
+          return _buildRecordCard(_records[recordIndex]);
+        }
+
+        if (_hasMore) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: _loadingMore
+                  ? const CircularProgressIndicator(color: AppColors.accent)
+                  : const SizedBox.shrink(),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Text(
+              '已经到底啦',
+              style: const TextStyle(
+                fontFamily: 'MapleMono',
+                fontSize: 12,
+                color: AppColors.textSecondary,
               ),
-              child: const Icon(Icons.arrow_back_ios_new, size: 16, color: Colors.white),
             ),
           ),
-          const SizedBox(width: 10),
-          const Text('Token 用量', style: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.41)),
-          const Spacer(),
-          TapScale(
-            onTap: () => _confirmClear(),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.delete_outline, size: 16, color: Colors.white),
-            ),
-          ),
-        ]),
-      ),
+        );
+      },
+      itemCount: _records.isEmpty
+          ? 3
+          : _records.length + 3 + (_loadingMore ? 0 : 0),
     );
   }
 
   void _confirmClear() {
+    if (_records.isEmpty) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -100,13 +205,17 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
         title: const Text('清空记录'),
         content: const Text('确定要清空所有 Token 用量记录吗？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await TokenUsageService().clear();
+              await _service.clear();
               if (!mounted) return;
-              setState(() => _records.clear());
+              _scrollCtrl.jumpTo(0);
+              await _load();
             },
             child: const Text('清空', style: TextStyle(color: AppColors.error)),
           ),
@@ -115,158 +224,225 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
     );
   }
 
-  Widget _buildContent() {
-    final t = _aggregate();
-    return SingleChildScrollView(
-      child: Column(children: [
-        const SizedBox(height: 16),
-        _buildSummaryCard(t),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            const Text('请求记录', style: TextStyle(fontFamily: 'MapleMono', fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B))),
-            const Spacer(),
-            Text('${_records.length} 次请求', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Colors.grey[400])),
-          ]),
+  Widget _buildSummaryCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceGlass,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.7),
+          width: 0.6,
         ),
-        const SizedBox(height: 10),
-        ..._records.map((r) => _buildRecordCard(r)),
-        const SizedBox(height: 32),
-      ]),
-    );
-  }
-
-  _Totals _aggregate() {
-    int input = 0, cacheRead = 0, cacheCreate = 0, output = 0;
-    for (final r in _records) {
-      input += r.inputTokens;
-      cacheRead += r.cacheReadTokens;
-      cacheCreate += r.cacheCreateTokens;
-      output += r.outputTokens;
-    }
-    return _Totals(input: input, cacheRead: cacheRead, cacheCreate: cacheCreate, output: output);
-  }
-
-  Widget _buildSummaryCard(_Totals t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF5B3E85), Color(0xFF7B5EA7), Color(0xFFA48CC9)],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFF7B5EA7).withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10)),
-          ],
-        ),
-        child: Column(children: [
-          const Text('累计总计', style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w500, color: Color(0x99FFFFFF), letterSpacing: 0.15)),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            '累计总计',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.15,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text('${t.total}', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.87, height: 1.1)),
-          const Text('tokens', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, fontWeight: FontWeight.w400, color: Color(0x80FFFFFF))),
+          Text(
+            '${_summary.totalTokens}',
+            style: const TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 36,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.87,
+              height: 1.1,
+            ),
+          ),
+          const Text(
+            'tokens',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 18),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.7),
+                width: 0.5,
+              ),
             ),
-            child: Row(children: [
-              _summaryCol('输入', t.input),
-              _summaryDivider(),
-              _summaryCol('缓存命中', t.cacheRead),
-              _summaryDivider(),
-              _summaryCol('输出', t.output),
-            ]),
+            child: Row(
+              children: [
+                _summaryCol('输入', _summary.inputTokens),
+                _summaryDivider(),
+                _summaryCol('缓存命中', _summary.cacheReadTokens),
+                _summaryDivider(),
+                _summaryCol('缓存新增', _summary.cacheCreateTokens),
+                _summaryDivider(),
+                _summaryCol('输出', _summary.outputTokens),
+              ],
+            ),
           ),
-        ]),
+        ],
       ),
     );
   }
 
   Widget _summaryCol(String label, int value) {
     return Expanded(
-      child: Column(children: [
-        Text('$value', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.26)),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.8))),
-      ]),
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: const TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.26,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _summaryDivider() {
-    return Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.15));
+    return Container(width: 1, height: 36, color: AppColors.border);
   }
 
   Widget _buildRecordCard(TokenRecord r) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Container(
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.75),
+            width: 0.5,
+          ),
           boxShadow: [
-            BoxShadow(color: const Color(0xFFE8B4F8).withValues(alpha: 0.07), blurRadius: 8, offset: const Offset(0, 3)),
+            BoxShadow(
+              color: AppColors.cardShadow,
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 头部：角色 + 时间
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: Row(children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFFD4BBFF), Color(0xFFE8B4F8)]),
-                    borderRadius: BorderRadius.circular(7),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      size: 13,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(Icons.auto_awesome, size: 13, color: Colors.white),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.characterName, style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D))),
-                      Text('${AppDateUtils.formatChatTime(r.timestamp)} · ${r.model}', style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, color: Colors.grey[400])),
-                    ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r.characterName,
+                          style: const TextStyle(
+                            fontFamily: 'MapleMono',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${AppDateUtils.formatChatTime(r.timestamp)} · ${r.model}',
+                          style: const TextStyle(
+                            fontFamily: 'MapleMono',
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0E6F6),
-                    borderRadius: BorderRadius.circular(8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${r.totalTokens}',
+                      style: const TextStyle(
+                        fontFamily: 'MapleMono',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent,
+                      ),
+                    ),
                   ),
-                  child: Text('${r.totalTokens}', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF6B4E9B))),
-                ),
-              ]),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
-            // token 分项
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFAF7FC),
+                color: AppColors.surfaceGlass,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(children: [
-                _miniChip('输入', r.inputTokens),
-                _miniChip('缓存命中', r.cacheReadTokens),
-                _miniChip('输出', r.outputTokens),
-              ]),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                children: [
+                  _miniChip('输入', r.inputTokens),
+                  _miniChip('缓存命中', r.cacheReadTokens),
+                  _miniChip('缓存新增', r.cacheCreateTokens),
+                  _miniChip('输出', r.outputTokens),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
           ],
@@ -276,15 +452,19 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
   }
 
   Widget _miniChip(String label, int value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('$value', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D))),
-          const SizedBox(width: 3),
-          Text(label, style: TextStyle(fontFamily: 'MapleMono', fontSize: 10, color: Colors.grey[400])),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$label：$value',
+        style: const TextStyle(
+          fontFamily: 'MapleMono',
+          fontSize: 11,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -299,27 +479,42 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(colors: [Color(0xFFE8B4F8), Color(0xFFD4BBFF)]),
-              boxShadow: [BoxShadow(color: const Color(0xFFE8B4F8).withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+              color: AppColors.accentLight,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: const Icon(Icons.data_usage_rounded, size: 32, color: Colors.white),
+            child: const Icon(
+              Icons.data_usage_rounded,
+              size: 32,
+              color: AppColors.accent,
+            ),
           ),
           const SizedBox(height: 20),
-          const Text('暂无记录', style: TextStyle(fontFamily: 'MapleMono', fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF6B4E9B))),
+          const Text(
+            '暂无记录',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('发送消息后自动记录 Token 用量', style: TextStyle(fontFamily: 'MapleMono', fontSize: 12, color: Colors.grey[400])),
+          const Text(
+            '发送消息后会自动记录 Token 用量',
+            style: TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
   }
-}
-
-class _Totals {
-  final int input;
-  final int cacheRead;
-  final int cacheCreate;
-  final int output;
-  const _Totals({required this.input, required this.cacheRead, required this.cacheCreate, required this.output});
-
-  int get total => input + cacheRead + cacheCreate + output;
 }

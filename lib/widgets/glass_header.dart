@@ -4,6 +4,7 @@ import 'warm_background.dart';
 
 /// 统一渐变顶栏，与聊天页 AppBar 高度一致
 class GlassHeader extends StatelessWidget {
+  final Widget? leading;
   final String subtitle;
   final String title;
   final String? badge;
@@ -11,6 +12,7 @@ class GlassHeader extends StatelessWidget {
 
   const GlassHeader({
     super.key,
+    this.leading,
     required this.subtitle,
     required this.title,
     this.badge,
@@ -26,6 +28,10 @@ class GlassHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 8),
+            ],
             Text(
               subtitle,
               style: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.white.withValues(alpha: 0.78)),

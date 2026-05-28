@@ -70,6 +70,48 @@ class RoleCardSyncService {
     });
   }
 
+  /// 同步删除本地角色对应的共享角色卡（仅删除当前登录用户发布的卡）
+  ///
+  /// 注意：该方法在删除本地角色前调用，默认先尝试清理远端，再由外部删本地。
+  Future<int> deleteRemoteCardsByLocalIds(List<int> localIds) async {
+    if (localIds.isEmpty) return 0;
+
+    final session = await _requireSession();
+    final metas = await _metasByLocalIds(localIds);
+    final rowsToDelete = metas
+        .where((m) => (m['owner_username'] as String?) == session.username)
+        .toList();
+    if (rowsToDelete.isEmpty) return 0;
+
+    final remoteIds = rowsToDelete
+        .map((m) => m['remote_id'])
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    int deleted = 0;
+    await webDav.withLock(WebDavConfig.roleCardDbPath, (lockToken) async {
+      final file = await remoteDb.getDatabaseForWrite(RemoteDatabaseKind.roleCard);
+      final db = await databaseFactory.openDatabase(file.path);
+      try {
+        for (final remoteId in remoteIds) {
+          final removed = await db.delete(
+            'shared_role_cards',
+            where: 'remote_id = ?',
+            whereArgs: [remoteId],
+          );
+          deleted += removed;
+        }
+      } finally {
+        await db.close();
+      }
+      await webDav.upload(WebDavConfig.roleCardDbPath, file, lockToken: lockToken);
+    });
+
+    print('[RoleCardSync] 清理远程角色卡: 删除 ${remoteIds.length} 条, 实际受影响 ${deleted} 条');
+    return deleted;
+  }
+
   /// 同步共享区角色卡到本地
   Future<RoleCardSyncResult> syncRemoteToLocal() async {
     final session = await _requireSession();
@@ -141,6 +183,17 @@ class RoleCardSyncService {
       limit: 1,
     );
     return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<List<Map<String, Object?>>> _metasByLocalIds(List<int> localIds) async {
+    if (localIds.isEmpty) return [];
+
+    final placeholders = List.filled(localIds.length, '?').join(',');
+    final rows = await DatabaseHelper().db.rawQuery(
+      'SELECT local_character_id, remote_id, owner_username FROM character_sync_meta WHERE local_character_id IN ($placeholders)',
+      localIds,
+    );
+    return rows;
   }
 
   Future<void> _upsertSyncMeta(int localId, String remoteId, String ownerUsername) async {

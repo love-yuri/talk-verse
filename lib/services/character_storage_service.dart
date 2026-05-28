@@ -7,7 +7,10 @@ class CharacterSyncSaveResult {
   final int id;
   final bool updatedExisting;
 
-  const CharacterSyncSaveResult({required this.id, required this.updatedExisting});
+  const CharacterSyncSaveResult({
+    required this.id,
+    required this.updatedExisting,
+  });
 }
 
 /// 发现页角色来源信息
@@ -35,7 +38,12 @@ class CharacterStorageService {
   /// 按 ID 加载单个角色
   Future<Character?> loadById(int id) async {
     final db = DatabaseHelper().db;
-    final rows = await db.query('characters', where: 'id = ?', whereArgs: [id], limit: 1);
+    final rows = await db.query(
+      'characters',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     return _rowToCharacter(rows.first);
   }
@@ -81,7 +89,12 @@ class CharacterStorageService {
     if (trimmed.isEmpty) return null;
 
     final db = DatabaseHelper().db;
-    final rows = await db.query('characters', where: 'name = ?', whereArgs: [trimmed], limit: 1);
+    final rows = await db.query(
+      'characters',
+      where: 'name = ?',
+      whereArgs: [trimmed],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     return _rowToCharacter(rows.first);
   }
@@ -91,7 +104,10 @@ class CharacterStorageService {
     final existing = await findByName(character.name);
     final saved = character.copyWith(id: existing?.id ?? 0);
     final id = await save(saved);
-    return CharacterSyncSaveResult(id: existing?.id ?? id, updatedExisting: existing != null);
+    return CharacterSyncSaveResult(
+      id: existing?.id ?? id,
+      updatedExisting: existing != null,
+    );
   }
 
   /// 保存或更新角色，返回自动生成的 ID
@@ -106,13 +122,29 @@ class CharacterStorageService {
       'my_nickname': character.myNickname,
       'ai_nickname': character.aiNickname,
     };
-    return await db.insert('characters', data, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'characters',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// 批量删除角色
+  Future<void> deleteMany(List<int> ids) async {
+    if (ids.isEmpty) return;
+
+    final db = DatabaseHelper().db;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.delete(
+      'characters',
+      where: 'id IN ($placeholders)',
+      whereArgs: ids,
+    );
   }
 
   /// 删除角色
   Future<void> delete(int id) async {
-    final db = DatabaseHelper().db;
-    await db.delete('characters', where: 'id = ?', whereArgs: [id]);
+    await deleteMany([id]);
   }
 
   Character _rowToCharacter(Map<String, Object?> r) {

@@ -197,7 +197,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           TextField(
             controller: _editCtrl,
             maxLines: null,
-            style: isUser ? AppTextStyles.chatMessageUser : AppTextStyles.chatMessage,
+            style: AppTextStyles.chatMessage,
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

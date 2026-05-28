@@ -87,12 +87,12 @@ class _ChatInputState extends State<ChatInput> {
           hintText: '输入消息... ♡',
           hintStyle: AppTextStyles.inputHint.copyWith(color: AppColors.textMuted),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
           suffix: TapScale(
             onTap: _insertParen,
             child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 16, color: AppColors.textMuted)),
+              padding: const EdgeInsets.all(0),
+              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 18, color: AppColors.textMuted)),
             ),
           ),
         ),

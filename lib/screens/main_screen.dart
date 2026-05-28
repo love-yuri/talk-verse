@@ -123,7 +123,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
-                      // 图标
                       ...List.generate(_items.length, (i) {
                         final active = _idx == i;
                         return Positioned(
@@ -135,10 +134,28 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                             onTap: () => _switchTab(i),
                             itemWidth: itemW,
                             iconTop: iconTop,
+                            labelTop: labelTop,
                           ),
                         );
                       }),
-                      // 标签
+                      Positioned(
+                        left: centerX - itemW / 2,
+                        top: 0,
+                        child: IgnorePointer(
+                          child: SizedBox(
+                            width: itemW,
+                            height: navH,
+                            child: Padding(
+                              padding: EdgeInsets.only(top: iconTop),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Icon(_items[_idx].active, size: 21, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 选中标签
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 320),
                         curve: Curves.easeOutCubic,
@@ -161,7 +178,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                 key: ValueKey(_idx),
                                 style: TextStyle(
                                   fontFamily: 'MapleMono', fontSize: 10, fontWeight: FontWeight.w600,
-                                  color: AppColors.accent, letterSpacing: 0.07,
+                                  color: AppColors.navActive, letterSpacing: 0.07,
                                 ),
                               ),
                             ),
@@ -186,6 +203,7 @@ class _NavIcon extends StatefulWidget {
   final VoidCallback onTap;
   final double itemWidth;
   final double iconTop;
+  final double labelTop;
 
   const _NavIcon({
     required this.item,
@@ -193,6 +211,7 @@ class _NavIcon extends StatefulWidget {
     required this.onTap,
     required this.itemWidth,
     required this.iconTop,
+    required this.labelTop,
   });
 
   @override
@@ -235,25 +254,41 @@ class _NavIconState extends State<_NavIcon> with SingleTickerProviderStateMixin 
       child: SizedBox(
         width: widget.itemWidth,
         height: 64,
-        child: Padding(
-          padding: EdgeInsets.only(top: widget.iconTop),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: AnimatedBuilder(
-              animation: _scaleAnim,
-              builder: (context, child) => Transform.scale(scale: _scaleAnim.value, child: child),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                child: Icon(
-                  widget.isActive ? widget.item.active : widget.item.inactive,
-                  key: ValueKey(widget.isActive),
-                  size: 21,
-                  color: widget.isActive ? Colors.white : AppColors.textTertiary,
+        child: Stack(
+          children: [
+            // 图标
+            Padding(
+              padding: EdgeInsets.only(top: widget.iconTop),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: AnimatedBuilder(
+                  animation: _scaleAnim,
+                  builder: (context, child) => Transform.scale(scale: _scaleAnim.value, child: child),
+                  child: Icon(
+                    widget.item.inactive,
+                    size: 21,
+                    color: widget.isActive ? Colors.transparent : AppColors.navInactive,
+                  ),
                 ),
               ),
             ),
-          ),
+            // 未选中标签
+            if (!widget.isActive)
+              Positioned(
+                top: widget.labelTop,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    widget.item.label,
+                    style: TextStyle(
+                      fontFamily: 'MapleMono', fontSize: 10, fontWeight: FontWeight.w600,
+                      color: AppColors.textTertiary, letterSpacing: 0.07,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

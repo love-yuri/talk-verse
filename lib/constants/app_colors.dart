@@ -36,7 +36,7 @@ class AppColors {
   static const Color chatAppBarEnd = Color(0xFFEADBD0);
 
   static const Color navActive = Color(0xFF6F9691);
-  static const Color navInactive = Color(0xFFA8B2B0);
+  static const Color navInactive = Color(0xFF687674);
   static const Color navBackground = Color(0xEFFFFCF8);
 
   static const Color shadow = Color(0x1A7EA6A1);

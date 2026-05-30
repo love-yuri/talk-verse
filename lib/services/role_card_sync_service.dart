@@ -14,10 +14,17 @@ import 'webdav_service.dart';
 class RoleCardSyncResult {
   final int inserted;
   final int updated;
+  final int localized;
+  final int removed;
 
-  const RoleCardSyncResult({required this.inserted, required this.updated});
+  const RoleCardSyncResult({
+    required this.inserted,
+    required this.updated,
+    this.localized = 0,
+    this.removed = 0,
+  });
 
-  int get total => inserted + updated;
+  int get total => inserted + updated + localized + removed;
 }
 
 /// 共享角色卡同步服务
@@ -41,31 +48,33 @@ class RoleCardSyncService {
   Future<void> publish(Character character) async {
     final session = await _requireSession();
     await webDav.withLock(WebDavConfig.roleCardDbPath, (lockToken) async {
-      final file = await remoteDb.getDatabaseForWrite(RemoteDatabaseKind.roleCard);
+      final file = await remoteDb.getDatabaseForWrite(
+        RemoteDatabaseKind.roleCard,
+      );
       final remoteId = await _remoteIdForCharacter(character, session);
       print(
         '[RoleCardSync] 发布角色卡: remoteId=$remoteId, name=${character.name}, owner=${session.username}',
       );
       final db = await databaseFactory.openDatabase(file.path);
       try {
-        await db.insert(
-          'shared_role_cards',
-          {
-            'remote_id': remoteId,
-            'owner_username': session.username,
-            'name': character.name,
-            'avatar': character.avatar,
-            'personality': character.personality,
-            'greeting': character.greeting,
-            'my_nickname': character.myNickname,
-            'ai_nickname': character.aiNickname,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        await db.insert('shared_role_cards', {
+          'remote_id': remoteId,
+          'owner_username': session.username,
+          'name': character.name,
+          'avatar': character.avatar,
+          'personality': character.personality,
+          'greeting': character.greeting,
+          'my_nickname': character.myNickname,
+          'ai_nickname': character.aiNickname,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
       } finally {
         await db.close();
       }
-      await webDav.upload(WebDavConfig.roleCardDbPath, file, lockToken: lockToken);
+      await webDav.upload(
+        WebDavConfig.roleCardDbPath,
+        file,
+        lockToken: lockToken,
+      );
       await _upsertSyncMeta(character.id, remoteId, session.username);
     });
   }
@@ -91,7 +100,9 @@ class RoleCardSyncService {
 
     int deleted = 0;
     await webDav.withLock(WebDavConfig.roleCardDbPath, (lockToken) async {
-      final file = await remoteDb.getDatabaseForWrite(RemoteDatabaseKind.roleCard);
+      final file = await remoteDb.getDatabaseForWrite(
+        RemoteDatabaseKind.roleCard,
+      );
       final db = await databaseFactory.openDatabase(file.path);
       try {
         for (final remoteId in remoteIds) {
@@ -105,10 +116,14 @@ class RoleCardSyncService {
       } finally {
         await db.close();
       }
-      await webDav.upload(WebDavConfig.roleCardDbPath, file, lockToken: lockToken);
+      await webDav.upload(
+        WebDavConfig.roleCardDbPath,
+        file,
+        lockToken: lockToken,
+      );
     });
 
-    print('[RoleCardSync] 清理远程角色卡: 删除 ${remoteIds.length} 条, 实际受影响 ${deleted} 条');
+    print('[RoleCardSync] 清理远程角色卡: 删除 ${remoteIds.length} 条, 实际受影响 $deleted 条');
     return deleted;
   }
 
@@ -123,6 +138,9 @@ class RoleCardSyncService {
     final db = await databaseFactory.openDatabase(file.path);
     var inserted = 0;
     var updated = 0;
+    var localized = 0;
+    var removed = 0;
+    final remoteIds = <String>{};
     try {
       final rows = await db.query('shared_role_cards');
       print('[RoleCardSync] shared_role_cards 行数: ${rows.length}');
@@ -131,9 +149,12 @@ class RoleCardSyncService {
           '[RoleCardSync] 读取远程角色卡行: remote_id=${row['remote_id']}, owner=${row['owner_username']}, name=${row['name']}',
         );
         final remote = RemoteRoleCard.fromRow(row);
+        remoteIds.add(remote.remoteId);
         final meta = await _metaByRemoteId(remote.remoteId);
         if (meta == null) {
-          final localId = await characterStorage.save(remote.character.copyWith(id: 0));
+          final localId = await characterStorage.save(
+            remote.character.copyWith(id: 0),
+          );
           await _upsertSyncMeta(localId, remote.remoteId, remote.ownerUsername);
           print(
             '[RoleCardSync] 新增远程角色到本地: remoteId=${remote.remoteId}, localId=$localId, name=${remote.character.name}',
@@ -152,8 +173,19 @@ class RoleCardSyncService {
     } finally {
       await db.close();
     }
-    print('[RoleCardSync] 同步完成: inserted=$inserted, updated=$updated');
-    return RoleCardSyncResult(inserted: inserted, updated: updated);
+    final cleanup = await _reconcileDeletedRemoteCards(remoteIds);
+    localized = cleanup.localized;
+    removed = cleanup.removed;
+
+    print(
+      '[RoleCardSync] 同步完成: inserted=$inserted, updated=$updated, localized=$localized, removed=$removed',
+    );
+    return RoleCardSyncResult(
+      inserted: inserted,
+      updated: updated,
+      localized: localized,
+      removed: removed,
+    );
   }
 
   Future<UserSession> _requireSession() async {
@@ -162,7 +194,10 @@ class RoleCardSyncService {
     return session;
   }
 
-  Future<String> _remoteIdForCharacter(Character character, UserSession session) async {
+  Future<String> _remoteIdForCharacter(
+    Character character,
+    UserSession session,
+  ) async {
     final db = DatabaseHelper().db;
     final rows = await db.query(
       'character_sync_meta',
@@ -185,7 +220,9 @@ class RoleCardSyncService {
     return rows.isEmpty ? null : rows.first;
   }
 
-  Future<List<Map<String, Object?>>> _metasByLocalIds(List<int> localIds) async {
+  Future<List<Map<String, Object?>>> _metasByLocalIds(
+    List<int> localIds,
+  ) async {
     if (localIds.isEmpty) return [];
 
     final placeholders = List.filled(localIds.length, '?').join(',');
@@ -196,16 +233,75 @@ class RoleCardSyncService {
     return rows;
   }
 
-  Future<void> _upsertSyncMeta(int localId, String remoteId, String ownerUsername) async {
-    await DatabaseHelper().db.insert(
+  Future<_DeletedRemoteCardCleanup> _reconcileDeletedRemoteCards(
+    Set<String> remoteIds,
+  ) async {
+    final metas = await _allSyncMetas();
+    var localized = 0;
+    var removed = 0;
+
+    for (final meta in metas) {
+      final remoteId = meta['remote_id'] as String;
+      if (remoteIds.contains(remoteId)) continue;
+
+      final localId = meta['local_character_id'] as int;
+      final hasChatRecords = await _hasChatRecords(localId);
+      if (hasChatRecords) {
+        await _deleteSyncMeta(localId);
+        localized++;
+      } else {
+        await characterStorage.delete(localId);
+        removed++;
+      }
+    }
+
+    return _DeletedRemoteCardCleanup(localized: localized, removed: removed);
+  }
+
+  Future<List<Map<String, Object?>>> _allSyncMetas() async {
+    return DatabaseHelper().db.query(
       'character_sync_meta',
-      {
-        'local_character_id': localId,
-        'remote_id': remoteId,
-        'owner_username': ownerUsername,
-        'last_synced_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      columns: ['local_character_id', 'remote_id', 'owner_username'],
     );
   }
+
+  Future<bool> _hasChatRecords(int localId) async {
+    final rows = await DatabaseHelper().db.rawQuery(
+      'SELECT COUNT(*) AS count FROM sessions WHERE character_id = ?',
+      [localId],
+    );
+    final count = rows.first['count'] as int? ?? 0;
+    return count > 0;
+  }
+
+  Future<void> _deleteSyncMeta(int localId) async {
+    await DatabaseHelper().db.delete(
+      'character_sync_meta',
+      where: 'local_character_id = ?',
+      whereArgs: [localId],
+    );
+  }
+
+  Future<void> _upsertSyncMeta(
+    int localId,
+    String remoteId,
+    String ownerUsername,
+  ) async {
+    await DatabaseHelper().db.insert('character_sync_meta', {
+      'local_character_id': localId,
+      'remote_id': remoteId,
+      'owner_username': ownerUsername,
+      'last_synced_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+}
+
+class _DeletedRemoteCardCleanup {
+  final int localized;
+  final int removed;
+
+  const _DeletedRemoteCardCleanup({
+    required this.localized,
+    required this.removed,
+  });
 }

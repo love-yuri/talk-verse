@@ -87,7 +87,10 @@ class _CharacterListScreenState extends State<CharacterListScreen>
       debugPrint('删除共享角色卡失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('本地删除成功，但远程同步失败：$e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('本地删除成功，但远程同步失败：$e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -232,7 +235,12 @@ class _CharacterListScreenState extends State<CharacterListScreen>
       _showSnack(
         result.total == 0
             ? '共享区暂无新角色'
-            : '已同步 ${result.inserted} 个新角色，更新 ${result.updated} 个角色',
+            : [
+                if (result.inserted > 0) '新增 ${result.inserted}',
+                if (result.updated > 0) '更新 ${result.updated}',
+                if (result.localized > 0) '转为本地 ${result.localized}',
+                if (result.removed > 0) '移除 ${result.removed}',
+              ].join('，'),
         backgroundColor: AppColors.success,
       );
     } catch (e) {
@@ -264,7 +272,10 @@ class _CharacterListScreenState extends State<CharacterListScreen>
         await _storage.save(newChar);
         if (mounted) {
           _loadCharacters();
-          _showSnack('已导入「${newChar.name}」', backgroundColor: AppColors.success);
+          _showSnack(
+            '已导入「${newChar.name}」',
+            backgroundColor: AppColors.success,
+          );
         }
       }
     } catch (e) {

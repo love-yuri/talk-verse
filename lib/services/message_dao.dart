@@ -21,6 +21,51 @@ class MessageDao {
     return rows.map(_rowToMessage).toList();
   }
 
+  /// 加载会话最近的一页消息，返回时间升序列表
+  Future<List<Message>> loadRecentMessages(
+    int sessionId, {
+    int limit = 40,
+  }) async {
+    final db = DatabaseHelper().db;
+    final rows = await db.query(
+      'messages',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+      orderBy: 'timestamp DESC, id DESC',
+      limit: limit,
+    );
+    return rows.reversed.map(_rowToMessage).toList();
+  }
+
+  /// 加载指定消息之前的一页历史消息，返回时间升序列表
+  Future<List<Message>> loadMessagesBefore(
+    int sessionId,
+    Message oldestMessage, {
+    int limit = 40,
+  }) async {
+    final db = DatabaseHelper().db;
+    final oldestTimestamp = oldestMessage.timestamp.toIso8601String();
+    final rows = await db.query(
+      'messages',
+      where: '''
+        session_id = ?
+        AND (
+          timestamp < ?
+          OR (timestamp = ? AND id < ?)
+        )
+      ''',
+      whereArgs: [
+        sessionId,
+        oldestTimestamp,
+        oldestTimestamp,
+        oldestMessage.id,
+      ],
+      orderBy: 'timestamp DESC, id DESC',
+      limit: limit,
+    );
+    return rows.reversed.map(_rowToMessage).toList();
+  }
+
   /// 插入一条消息，返回自动生成的 ID
   Future<int> insertMessage(int sessionId, Message msg) async {
     final db = DatabaseHelper().db;
@@ -38,14 +83,19 @@ class MessageDao {
   /// 更新一条消息
   Future<void> updateMessage(Message msg) async {
     final db = DatabaseHelper().db;
-    await db.update('messages', {
-      'content': msg.content,
-      'type': msg.type.name,
-      'timestamp': msg.timestamp.toIso8601String(),
-      'is_read': msg.isRead ? 1 : 0,
-      'status': msg.status.name,
-      'is_error': msg.isError ? 1 : 0,
-    }, where: 'id = ?', whereArgs: [msg.id]);
+    await db.update(
+      'messages',
+      {
+        'content': msg.content,
+        'type': msg.type.name,
+        'timestamp': msg.timestamp.toIso8601String(),
+        'is_read': msg.isRead ? 1 : 0,
+        'status': msg.status.name,
+        'is_error': msg.isError ? 1 : 0,
+      },
+      where: 'id = ?',
+      whereArgs: [msg.id],
+    );
   }
 
   /// 删除一条消息
@@ -59,13 +109,20 @@ class MessageDao {
     if (msgIds.isEmpty) return;
     final db = DatabaseHelper().db;
     final placeholders = List.filled(msgIds.length, '?').join(',');
-    await db.rawDelete('DELETE FROM messages WHERE id IN ($placeholders)', msgIds);
+    await db.rawDelete(
+      'DELETE FROM messages WHERE id IN ($placeholders)',
+      msgIds,
+    );
   }
 
   /// 清空指定会话的所有消息
   Future<void> clearSessionMessages(int sessionId) async {
     final db = DatabaseHelper().db;
-    await db.delete('messages', where: 'session_id = ?', whereArgs: [sessionId]);
+    await db.delete(
+      'messages',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
   }
 
   Message _rowToMessage(Map<String, dynamic> r) {

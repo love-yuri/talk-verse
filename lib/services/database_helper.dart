@@ -36,7 +36,7 @@ class DatabaseHelper {
     _db = await databaseFactory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 8,
+        version: 9,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -75,7 +75,12 @@ class DatabaseHelper {
         FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_messages_session ON messages(session_id)');
+    await db.execute(
+      'CREATE INDEX idx_messages_session ON messages(session_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_messages_session_time_id ON messages(session_id, timestamp, id)',
+    );
 
     await db.execute('''
       CREATE TABLE token_records (
@@ -90,7 +95,9 @@ class DatabaseHelper {
         model TEXT NOT NULL
       )
     ''');
-    await db.execute('CREATE INDEX idx_tokens_session ON token_records(session_id)');
+    await db.execute(
+      'CREATE INDEX idx_tokens_session ON token_records(session_id)',
+    );
 
     await db.execute('''
       CREATE TABLE characters (
@@ -113,13 +120,22 @@ class DatabaseHelper {
         FOREIGN KEY (local_character_id) REFERENCES characters(id) ON DELETE CASCADE
       )
     ''');
-    await db.execute('CREATE INDEX idx_character_sync_remote_id ON character_sync_meta(remote_id)');
+    await db.execute(
+      'CREATE INDEX idx_character_sync_remote_id ON character_sync_meta(remote_id)',
+    );
   }
 
   /// 升级：逐版本迁移
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 8) {
-      await db.execute('ALTER TABLE messages ADD COLUMN is_error INTEGER DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE messages ADD COLUMN is_error INTEGER DEFAULT 0',
+      );
+    }
+    if (oldVersion < 9) {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_messages_session_time_id ON messages(session_id, timestamp, id)',
+      );
     }
   }
 }

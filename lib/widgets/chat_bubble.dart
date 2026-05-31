@@ -38,6 +38,8 @@ class ChatBubble extends StatefulWidget {
 }
 
 class _ChatBubbleState extends State<ChatBubble> {
+  static const int _richTextParseLimit = 4000;
+
   bool _isEditing = false;
   late TextEditingController _editCtrl;
 
@@ -59,7 +61,9 @@ class _ChatBubbleState extends State<ChatBubble> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) _avatar(widget.characterAvatar),
@@ -68,7 +72,9 @@ class _ChatBubbleState extends State<ChatBubble> {
             child: GestureDetector(
               onLongPress: widget.onLongPress,
               child: Column(
-                crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isUser
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   _bubbleWithStatus(isUser),
                   const SizedBox(height: 3),
@@ -76,7 +82,8 @@ class _ChatBubbleState extends State<ChatBubble> {
                     AppDateUtils.formatTime(widget.message.timestamp),
                     style: AppTextStyles.chatTime,
                   ),
-                  if (widget.isMenuActive && !_isEditing) _buildInlineMenu(isUser),
+                  if (widget.isMenuActive && !_isEditing)
+                    _buildInlineMenu(isUser),
                 ],
               ),
             ),
@@ -106,7 +113,10 @@ class _ChatBubbleState extends State<ChatBubble> {
           _menuBtn(Icons.copy, '复制', () {
             Clipboard.setData(ClipboardData(text: widget.message.content));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('已复制'), duration: Duration(seconds: 1)),
+              const SnackBar(
+                content: Text('已复制'),
+                duration: Duration(seconds: 1),
+              ),
             );
           }),
           _menuBtn(Icons.delete_outline, '删除', () {
@@ -135,7 +145,10 @@ class _ChatBubbleState extends State<ChatBubble> {
           children: [
             Icon(icon, size: 14, color: AppColors.accent),
             const SizedBox(width: 4),
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.accent)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.accent),
+            ),
           ],
         ),
       ),
@@ -162,7 +175,10 @@ class _ChatBubbleState extends State<ChatBubble> {
         statusIcon = const SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textTertiary),
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            color: AppColors.textTertiary,
+          ),
         );
         break;
       case MessageStatus.failed:
@@ -186,12 +202,17 @@ class _ChatBubbleState extends State<ChatBubble> {
   /// 编辑中的气泡
   Widget _editingBubble(bool isUser) {
     return Container(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 2 / 3),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 2 / 3,
+      ),
       margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
         color: isUser ? AppColors.bubbleUser : AppColors.bubbleAI,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.55), width: 1.2),
+        border: Border.all(
+          color: AppColors.accent.withValues(alpha: 0.55),
+          width: 1.2,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -208,7 +229,9 @@ class _ChatBubbleState extends State<ChatBubble> {
           ),
           Container(
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+              border: Border(
+                top: BorderSide(color: AppColors.border, width: 0.5),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -221,7 +244,8 @@ class _ChatBubbleState extends State<ChatBubble> {
                 }),
                 _editActionBtn('确认', () {
                   final newContent = _editCtrl.text.trim();
-                  if (newContent.isNotEmpty && newContent != widget.message.content) {
+                  if (newContent.isNotEmpty &&
+                      newContent != widget.message.content) {
                     widget.onEditConfirm?.call(newContent);
                   }
                   setState(() => _isEditing = false);
@@ -234,7 +258,11 @@ class _ChatBubbleState extends State<ChatBubble> {
     );
   }
 
-  Widget _editActionBtn(String label, VoidCallback onTap, {bool isPrimary = false}) {
+  Widget _editActionBtn(
+    String label,
+    VoidCallback onTap, {
+    bool isPrimary = false,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
@@ -258,15 +286,21 @@ class _ChatBubbleState extends State<ChatBubble> {
       child: Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
         padding: const EdgeInsets.all(2),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(17),
           child: avatarPath.startsWith('/')
-              ? Image.file(File(avatarPath), fit: BoxFit.cover, errorBuilder: (c, e, s) => fallback)
-              : Image.asset(avatarPath, fit: BoxFit.cover, errorBuilder: (c, e, s) => fallback),
+              ? Image.file(
+                  File(avatarPath),
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => fallback,
+                )
+              : Image.asset(
+                  avatarPath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => fallback,
+                ),
         ),
       ),
     );
@@ -275,7 +309,9 @@ class _ChatBubbleState extends State<ChatBubble> {
   Widget _bubble(bool isUser) {
     final isError = widget.message.isError;
     return Container(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 2 / 3),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 2 / 3,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       margin: EdgeInsets.only(left: isUser ? 0 : 4, right: isUser ? 4 : 0),
       decoration: BoxDecoration(
@@ -287,10 +323,17 @@ class _ChatBubbleState extends State<ChatBubble> {
           bottomLeft: Radius.circular(isUser ? 16 : 4),
           bottomRight: Radius.circular(isUser ? 4 : 16),
         ),
-        border: isUser ? null : Border.all(color: AppColors.border.withValues(alpha: 0.7), width: 0.6),
+        border: isUser
+            ? null
+            : Border.all(
+                color: AppColors.border.withValues(alpha: 0.7),
+                width: 0.6,
+              ),
         boxShadow: [
           BoxShadow(
-            color: isUser ? AppColors.accent.withValues(alpha: 0.18) : AppColors.cardShadow,
+            color: isUser
+                ? AppColors.accent.withValues(alpha: 0.18)
+                : AppColors.cardShadow,
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -302,7 +345,7 @@ class _ChatBubbleState extends State<ChatBubble> {
     );
   }
 
-  /// 解析AI消息中的””引号内容并高亮显示
+  /// 解析 AI 消息中的引号内容并高亮显示，支持半角双引号和中文弯引号。
   Widget _buildRichContent(String text, {bool isError = false}) {
     final baseStyle = isError
         ? AppTextStyles.chatMessage.copyWith(color: AppColors.error)
@@ -310,40 +353,89 @@ class _ChatBubbleState extends State<ChatBubble> {
 
     if (isError) {
       return RichText(
-        text: TextSpan(style: baseStyle, children: [TextSpan(text: text)]),
+        text: TextSpan(
+          style: baseStyle,
+          children: [TextSpan(text: text)],
+        ),
       );
     }
 
-    final spans = <TextSpan>[];
-    final regex = RegExp('”(.*?)”');
-    int lastEnd = 0;
-
-    for (final match in regex.allMatches(text)) {
-      if (match.start > lastEnd) {
-        spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
-      }
-      spans.add(TextSpan(
-        text: '”${match.group(1)!}”',
-        style: const TextStyle(
-          color: AppColors.accent,
-          fontWeight: FontWeight.w600,
-        ),
-      ));
-      lastEnd = match.end;
+    if (text.length > _richTextParseLimit) {
+      return Text(text, style: baseStyle);
     }
+
+    final spans = _buildQuoteSpans(text);
+    return RichText(
+      text: TextSpan(style: baseStyle, children: spans),
+    );
+  }
+
+  List<TextSpan> _buildQuoteSpans(String text) {
+    const quoteStyle = TextStyle(
+      color: AppColors.accent,
+      fontWeight: FontWeight.w600,
+    );
+    final spans = <TextSpan>[];
+    int lastEnd = 0;
+    int index = 0;
+
+    while (index < text.length) {
+      final startChar = text[index];
+      final endChar = _closingQuoteFor(startChar);
+      if (endChar == null || _isEscapedStraightQuote(text, index)) {
+        index++;
+        continue;
+      }
+
+      final quoteEnd = _findClosingQuote(text, index + 1, endChar);
+      if (quoteEnd == -1) {
+        index++;
+        continue;
+      }
+
+      if (index > lastEnd) {
+        spans.add(TextSpan(text: text.substring(lastEnd, index)));
+      }
+      spans.add(
+        TextSpan(text: text.substring(index, quoteEnd + 1), style: quoteStyle),
+      );
+      lastEnd = quoteEnd + 1;
+      index = quoteEnd + 1;
+    }
+
     if (lastEnd < text.length) {
       spans.add(TextSpan(text: text.substring(lastEnd)));
     }
     if (spans.isEmpty) {
       spans.add(TextSpan(text: text));
     }
+    return spans;
+  }
 
-    return RichText(
-      text: TextSpan(
-        style: baseStyle,
-        children: spans,
-      ),
-    );
+  String? _closingQuoteFor(String char) {
+    return switch (char) {
+      '"' => '"',
+      '“' => '”',
+      _ => null,
+    };
+  }
+
+  int _findClosingQuote(String text, int start, String endChar) {
+    for (var i = start; i < text.length; i++) {
+      if (text[i] != endChar) continue;
+      if (endChar == '"' && _isEscapedStraightQuote(text, i)) continue;
+      return i;
+    }
+    return -1;
+  }
+
+  bool _isEscapedStraightQuote(String text, int index) {
+    if (text[index] != '"' || index == 0) return false;
+    var slashCount = 0;
+    for (var i = index - 1; i >= 0 && text[i] == r'\'; i--) {
+      slashCount++;
+    }
+    return slashCount.isOdd;
   }
 
   /// 正在输入的动画气泡
@@ -361,7 +453,11 @@ class _ChatBubbleState extends State<ChatBubble> {
           bottomRight: Radius.circular(16),
         ),
         boxShadow: [
-          BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(

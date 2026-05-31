@@ -8,7 +8,12 @@ class ChatInput extends StatefulWidget {
   final VoidCallback onSend;
   final ValueChanged<String>? onTextChanged;
 
-  const ChatInput({super.key, required this.controller, required this.onSend, this.onTextChanged});
+  const ChatInput({
+    super.key,
+    required this.controller,
+    required this.onSend,
+    this.onTextChanged,
+  });
 
   @override
   State<ChatInput> createState() => _ChatInputState();
@@ -40,21 +45,32 @@ class _ChatInputState extends State<ChatInput> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceGlass,
-        border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.7), width: 0.6)),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.border.withValues(alpha: 0.7),
+            width: 0.6,
+          ),
+        ),
         boxShadow: [
-          BoxShadow(color: AppColors.cardShadow, blurRadius: 16, offset: const Offset(0, -6)),
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 16,
+            offset: const Offset(0, -6),
+          ),
         ],
       ),
-      padding: EdgeInsets.only(left: 10, right: 10, top: 6, bottom: MediaQuery.of(context).padding.bottom + 6),
+      padding: EdgeInsets.only(
+        left: 10,
+        right: 10,
+        top: 6,
+        bottom: MediaQuery.of(context).padding.bottom + 6,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: _inputField()),
           const SizedBox(width: 8),
-          Opacity(
-            opacity: _hasText ? 1.0 : 0.4,
-            child: _sendBtn(),
-          ),
+          Opacity(opacity: _hasText ? 1.0 : 0.4, child: _sendBtn()),
         ],
       ),
     );
@@ -76,7 +92,10 @@ class _ChatInputState extends State<ChatInput> {
       decoration: BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.8), width: 0.6),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.8),
+          width: 0.6,
+        ),
       ),
       child: TextField(
         controller: widget.controller,
@@ -85,14 +104,26 @@ class _ChatInputState extends State<ChatInput> {
         style: AppTextStyles.input,
         decoration: InputDecoration(
           hintText: '输入消息... ♡',
-          hintStyle: AppTextStyles.inputHint.copyWith(color: AppColors.textMuted),
+          hintStyle: AppTextStyles.inputHint.copyWith(
+            color: AppColors.textMuted,
+          ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 2,
+          ),
           suffix: TapScale(
             onTap: _insertParen,
             child: Padding(
               padding: const EdgeInsets.all(0),
-              child: Text('()', style: const TextStyle(fontFamily: 'MapleMono', fontSize: 18, color: AppColors.textMuted)),
+              child: Text(
+                '()',
+                style: const TextStyle(
+                  fontFamily: 'MapleMono',
+                  fontSize: 18,
+                  color: AppColors.textMuted,
+                ),
+              ),
             ),
           ),
         ),

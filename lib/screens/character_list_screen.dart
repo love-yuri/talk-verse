@@ -8,6 +8,7 @@ import '../services/character_storage_service.dart';
 import '../services/role_card_sync_service.dart';
 import '../widgets/character_card.dart';
 import '../widgets/glass_header.dart';
+import 'ai_character_generate_screen.dart';
 import 'character_detail_screen.dart';
 import 'character_edit_screen.dart';
 
@@ -331,6 +332,11 @@ class _CharacterListScreenState extends State<CharacterListScreen>
       title: '发现',
       badge: '$_totalCount',
       actions: [
+        GlassHeader.iconBtn(
+          Icons.auto_awesome_rounded,
+          onTap: _aiCreateCharacter,
+        ),
+        const SizedBox(width: 10),
         GlassHeader.iconBtn(Icons.image_outlined, onTap: _importCharacter),
         const SizedBox(width: 10),
         GlassHeader.iconBtn(
@@ -673,6 +679,23 @@ class _CharacterListScreenState extends State<CharacterListScreen>
     if (newChar != null) {
       await _storage.save(newChar);
       if (mounted) _loadCharacters();
+    }
+  }
+
+  Future<void> _aiCreateCharacter() async {
+    final newChar = await Navigator.push<Character>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AiCharacterGenerateScreen(index: _totalCount),
+      ),
+    );
+
+    if (newChar != null) {
+      await _storage.save(newChar);
+      if (mounted) {
+        _loadCharacters();
+        _showSnack('已创建「${newChar.name}」', backgroundColor: AppColors.success);
+      }
     }
   }
 

@@ -108,7 +108,10 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
 
   Widget _buildAppBar() {
     return GlassHeader(
-      leading: GlassHeader.iconBtn(Icons.arrow_back_ios_new, onTap: () => Navigator.pop(context)),
+      leading: GlassHeader.iconBtn(
+        Icons.arrow_back_ios_new,
+        onTap: () => Navigator.pop(context),
+      ),
       subtitle: '统计',
       title: 'Token 用量',
       badge: '${_summary.recordCount}',
@@ -293,8 +296,6 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
                 _summaryDivider(),
                 _summaryCol('缓存命中', _summary.cacheReadTokens),
                 _summaryDivider(),
-                _summaryCol('缓存新增', _summary.cacheCreateTokens),
-                _summaryDivider(),
                 _summaryCol('输出', _summary.outputTokens),
               ],
             ),
@@ -439,7 +440,6 @@ class _TokenUsageScreenState extends State<TokenUsageScreen> {
                 children: [
                   _miniChip('输入', r.inputTokens),
                   _miniChip('缓存命中', r.cacheReadTokens),
-                  _miniChip('缓存新增', r.cacheCreateTokens),
                   _miniChip('输出', r.outputTokens),
                 ],
               ),

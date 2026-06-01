@@ -22,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   late List<_ConfigEntry> _configs;
+  late _ImageConfigEntry _imageConfig;
   late int _activeIndex;
   int _editIndex = 0;
   bool _selectorOpen = false;
@@ -54,6 +55,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         )
         .toList();
+    _imageConfig = _ImageConfigEntry(
+      urlCtrl: TextEditingController(text: settings.imageApiConfig.baseUrl),
+      keyCtrl: TextEditingController(text: settings.imageApiConfig.apiKey),
+      modelCtrl: TextEditingController(text: settings.imageApiConfig.model),
+      sizeCtrl: TextEditingController(text: settings.imageApiConfig.size),
+      qualityCtrl: TextEditingController(text: settings.imageApiConfig.quality),
+      outputFormatCtrl: TextEditingController(
+        text: settings.imageApiConfig.outputFormat,
+      ),
+      obscureKey: true,
+    );
     _activeIndex = settings.activeConfigIndex.clamp(0, _configs.length - 1);
     _editIndex = _activeIndex;
     setState(() => _isLoading = false);
@@ -70,6 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       c.reasoningBudgetCtrl.dispose();
       c.topKCtrl.dispose();
     }
+    _imageConfig.dispose();
     super.dispose();
   }
 
@@ -93,13 +106,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionHeader('API 配置'),
+                        _buildSectionHeader(
+                          'API 配置',
+                          trailing: '${_configs.length} 套配置',
+                        ),
                         const SizedBox(height: AppDimensions.spacingMd),
                         _buildConfigSelector(),
                         const SizedBox(height: 16),
                         _buildConfigFields(),
                         const SizedBox(height: 20),
                         _buildAddDeleteRow(),
+                        const SizedBox(height: AppDimensions.spacing3Xl),
+                        _buildSectionHeader('头像生成 API', trailing: 'GPT Image'),
+                        const SizedBox(height: AppDimensions.spacingMd),
+                        _buildImageConfigFields(),
                         const SizedBox(height: AppDimensions.spacing3Xl),
                         _buildSaveButton(),
                       ],
@@ -162,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {String? trailing}) {
     return Row(
       children: [
         Text(
@@ -175,14 +195,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const Spacer(),
-        Text(
-          '${_configs.length} 套配置',
-          style: const TextStyle(
-            fontFamily: 'MapleMono',
-            fontSize: 12,
-            color: AppColors.textSecondary,
+        if (trailing != null)
+          Text(
+            trailing,
+            style: const TextStyle(
+              fontFamily: 'MapleMono',
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -594,6 +615,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildImageConfigFields() {
+    final entry = _imageConfig;
+    return Column(
+      children: [
+        _buildField(
+          entry.urlCtrl,
+          'Image API URL',
+          'https://api.openai.com 或完整 /v1/images/generations',
+          Icons.image_search_rounded,
+        ),
+        const SizedBox(height: 12),
+        _buildField(
+          entry.keyCtrl,
+          'Image API Key',
+          'sk-...',
+          Icons.key_rounded,
+          obscure: entry.obscureKey,
+          suffix: _fieldIconButton(
+            entry.obscureKey ? Icons.visibility_off : Icons.visibility,
+            () => setState(() => entry.obscureKey = !entry.obscureKey),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildField(
+          entry.modelCtrl,
+          'Image Model',
+          'gpt-image-2',
+          Icons.auto_awesome_rounded,
+        ),
+        const SizedBox(height: 12),
+        _buildField(
+          entry.sizeCtrl,
+          'Image Size',
+          '1024x1024',
+          Icons.crop_square_rounded,
+        ),
+        const SizedBox(height: 12),
+        _buildField(
+          entry.qualityCtrl,
+          'Quality',
+          'auto',
+          Icons.high_quality_rounded,
+        ),
+        const SizedBox(height: 12),
+        _buildField(
+          entry.outputFormatCtrl,
+          'Output Format',
+          'png',
+          Icons.file_download_rounded,
+        ),
       ],
     );
   }
@@ -1115,6 +1190,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final settings = AiSettings(
       configs: configs,
       activeConfigIndex: _activeIndex,
+      imageApiConfig: ImageApiConfig(
+        baseUrl: _imageConfig.urlCtrl.text.trim().isEmpty
+            ? 'https://api.openai.com'
+            : _imageConfig.urlCtrl.text.trim(),
+        apiKey: _imageConfig.keyCtrl.text.trim(),
+        model: _imageConfig.modelCtrl.text.trim().isEmpty
+            ? 'gpt-image-2'
+            : _imageConfig.modelCtrl.text.trim(),
+        size: _imageConfig.sizeCtrl.text.trim().isEmpty
+            ? '1024x1024'
+            : _imageConfig.sizeCtrl.text.trim(),
+        quality: _imageConfig.qualityCtrl.text.trim().isEmpty
+            ? 'auto'
+            : _imageConfig.qualityCtrl.text.trim(),
+        outputFormat: _imageConfig.outputFormatCtrl.text.trim().isEmpty
+            ? 'png'
+            : _imageConfig.outputFormatCtrl.text.trim(),
+      ),
     );
     await _settingsService.save(settings);
 
@@ -1177,5 +1270,34 @@ class _ConfigEntry {
     maxTokensCtrl.dispose();
     reasoningBudgetCtrl.dispose();
     topKCtrl.dispose();
+  }
+}
+
+class _ImageConfigEntry {
+  final TextEditingController urlCtrl;
+  final TextEditingController keyCtrl;
+  final TextEditingController modelCtrl;
+  final TextEditingController sizeCtrl;
+  final TextEditingController qualityCtrl;
+  final TextEditingController outputFormatCtrl;
+  bool obscureKey;
+
+  _ImageConfigEntry({
+    required this.urlCtrl,
+    required this.keyCtrl,
+    required this.modelCtrl,
+    required this.sizeCtrl,
+    required this.qualityCtrl,
+    required this.outputFormatCtrl,
+    this.obscureKey = true,
+  });
+
+  void dispose() {
+    urlCtrl.dispose();
+    keyCtrl.dispose();
+    modelCtrl.dispose();
+    sizeCtrl.dispose();
+    qualityCtrl.dispose();
+    outputFormatCtrl.dispose();
   }
 }

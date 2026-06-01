@@ -64,14 +64,22 @@ class TalkVerseApp extends StatelessWidget {
         dividerColor: AppColors.divider,
         snackBarTheme: SnackBarThemeData(
           backgroundColor: AppColors.textPrimary.withValues(alpha: 0.92),
-          contentTextStyle: const TextStyle(fontFamily: 'MapleMono', color: Colors.white, fontSize: 13),
+          contentTextStyle: const TextStyle(
+            fontFamily: 'MapleMono',
+            color: Colors.white,
+            fontSize: 13,
+          ),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
         dialogTheme: DialogThemeData(
           backgroundColor: AppColors.surface,
           surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -94,13 +102,53 @@ class TalkVerseApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
         textTheme: const TextTheme(
-          headlineLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: 0.35, height: 1.27),
-          headlineMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.41, height: 1.29),
-          titleMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.24, height: 1.33),
-          bodyLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 15, fontWeight: FontWeight.w400, letterSpacing: -0.24, height: 1.33),
-          bodyMedium: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w400, letterSpacing: -0.08, height: 1.38),
-          labelLarge: TextStyle(fontFamily: 'MapleMono', fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.08),
-          labelSmall: TextStyle(fontFamily: 'MapleMono', fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.07),
+          headlineLarge: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.35,
+            height: 1.27,
+          ),
+          headlineMedium: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.41,
+            height: 1.29,
+          ),
+          titleMedium: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.24,
+            height: 1.33,
+          ),
+          bodyLarge: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            letterSpacing: -0.24,
+            height: 1.33,
+          ),
+          bodyMedium: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            letterSpacing: -0.08,
+            height: 1.38,
+          ),
+          labelLarge: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.08,
+          ),
+          labelSmall: TextStyle(
+            fontFamily: 'MapleMono',
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.07,
+          ),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.surface,

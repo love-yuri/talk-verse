@@ -79,17 +79,24 @@ class RoleCardSyncService {
     });
   }
 
-  /// 同步删除本地角色对应的共享角色卡（仅删除当前登录用户发布的卡）
+  /// 同步删除本地角色对应的共享角色卡。
   ///
-  /// 注意：该方法在删除本地角色前调用，默认先尝试清理远端，再由外部删本地。
-  Future<int> deleteRemoteCardsByLocalIds(List<int> localIds) async {
+  /// 默认仅删除当前登录用户发布的卡；远程角色页删除时可关闭该限制，按
+  /// remote_id 删除对应远程记录。
+  /// 该方法在删除本地角色前调用，默认先尝试清理远端，再由外部删本地。
+  Future<int> deleteRemoteCardsByLocalIds(
+    List<int> localIds, {
+    bool ownedOnly = true,
+  }) async {
     if (localIds.isEmpty) return 0;
 
     final session = await _requireSession();
     final metas = await _metasByLocalIds(localIds);
-    final rowsToDelete = metas
-        .where((m) => (m['owner_username'] as String?) == session.username)
-        .toList();
+    final rowsToDelete = ownedOnly
+        ? metas
+              .where((m) => (m['owner_username'] as String?) == session.username)
+              .toList()
+        : metas;
     if (rowsToDelete.isEmpty) return 0;
 
     final remoteIds = rowsToDelete

@@ -13,6 +13,7 @@ import 'package:talkverse/services/chat_storage_service.dart';
 import 'package:talkverse/services/database_helper.dart';
 import 'package:talkverse/services/remote_database_service.dart';
 import 'package:talkverse/services/role_card_sync_service.dart';
+import 'package:talkverse/services/webdav_service.dart';
 
 class _FakeRemoteDatabaseService extends RemoteDatabaseService {
   final File file;
@@ -21,6 +22,22 @@ class _FakeRemoteDatabaseService extends RemoteDatabaseService {
 
   @override
   Future<File> getDatabase(RemoteDatabaseKind kind) async => file;
+
+  @override
+  Future<File> getDatabaseForWrite(RemoteDatabaseKind kind) async => file;
+}
+
+class _FakeWebDavService extends WebDavService {
+  @override
+  Future<T> withLock<T>(
+    String remotePath,
+    Future<T> Function(String lockToken) action,
+  ) async {
+    return action('fake-lock-token');
+  }
+
+  @override
+  Future<void> upload(String remotePath, File file, {String? lockToken}) async {}
 }
 
 void main() {
@@ -133,6 +150,79 @@ void main() {
       expect(withChat, isNotNull);
       expect(withoutChat, isNull);
       expect(metas, isEmpty);
+    },
+  );
+
+  test(
+    'deleteRemoteCardsByLocalIds can delete imported remote cards when ownership is not required',
+    () async {
+      final characterStorage = CharacterStorageService();
+      final localDb = DatabaseHelper().db;
+      final remoteDb = await databaseFactory.openDatabase(remoteFile.path);
+      try {
+        await remoteDb.insert('shared_role_cards', {
+          'remote_id': 'remote-other-owner',
+          'owner_username': 'other-user',
+          'name': 'Remote Card',
+          'avatar': 'assets/images/default_avatar.png',
+          'personality': 'brave',
+          'greeting': '',
+          'my_nickname': '冒险者',
+          'ai_nickname': '',
+        });
+      } finally {
+        await remoteDb.close();
+      }
+
+      final localId = await characterStorage.save(
+        Character(
+          id: 0,
+          name: 'Remote Card',
+          avatar: 'assets/images/default_avatar.png',
+          personality: 'brave',
+          greeting: '',
+        ),
+      );
+      await localDb.insert('character_sync_meta', {
+        'local_character_id': localId,
+        'remote_id': 'remote-other-owner',
+        'owner_username': 'other-user',
+        'last_synced_at': DateTime.now().toIso8601String(),
+      });
+
+      final service = RoleCardSyncService(
+        authService: AuthService(),
+        characterStorage: characterStorage,
+        webDav: _FakeWebDavService(),
+        remoteDb: _FakeRemoteDatabaseService(remoteFile),
+      );
+
+      final ownedDeleted = await service.deleteRemoteCardsByLocalIds([localId]);
+      expect(ownedDeleted, 0);
+      var checkDb = await databaseFactory.openDatabase(remoteFile.path);
+      try {
+        final rows = await checkDb.rawQuery(
+          'SELECT COUNT(*) AS count FROM shared_role_cards',
+        );
+        expect(rows.first['count'], 1);
+      } finally {
+        await checkDb.close();
+      }
+
+      final anyDeleted = await service.deleteRemoteCardsByLocalIds(
+        [localId],
+        ownedOnly: false,
+      );
+      expect(anyDeleted, 1);
+      checkDb = await databaseFactory.openDatabase(remoteFile.path);
+      try {
+        final rows = await checkDb.rawQuery(
+          'SELECT COUNT(*) AS count FROM shared_role_cards',
+        );
+        expect(rows.first['count'], 0);
+      } finally {
+        await checkDb.close();
+      }
     },
   );
 }

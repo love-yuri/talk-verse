@@ -79,11 +79,14 @@ class _CharacterListScreenState extends State<CharacterListScreen>
     _hasSelectionConsistency();
   }
 
-  Future<void> _deleteCharacters(List<int> ids) async {
+  Future<void> _deleteCharacters(List<int> ids, {bool deleteAnyRemote = false}) async {
     if (ids.isEmpty) return;
 
     try {
-      await _roleCardSync.deleteRemoteCardsByLocalIds(ids);
+      await _roleCardSync.deleteRemoteCardsByLocalIds(
+        ids,
+        ownedOnly: !deleteAnyRemote,
+      );
     } catch (e) {
       debugPrint('删除共享角色卡失败: $e');
       if (mounted) {
@@ -183,8 +186,9 @@ class _CharacterListScreenState extends State<CharacterListScreen>
     if (confirmed != true) return;
 
     final ids = _selectedIds.toList();
+    final deleteAnyRemote = _activeIndex == 1;
     _selectedIds.clear();
-    await _deleteCharacters(ids);
+    await _deleteCharacters(ids, deleteAnyRemote: deleteAnyRemote);
     if (!mounted) return;
     setState(() => _selectionMode = false);
   }
@@ -216,7 +220,7 @@ class _CharacterListScreenState extends State<CharacterListScreen>
     final ids = _activeItems.map((item) => item.character.id).toList();
     _selectedIds.removeWhere((id) => ids.contains(id));
 
-    await _deleteCharacters(ids);
+    await _deleteCharacters(ids, deleteAnyRemote: _activeIndex == 1);
     if (!mounted) return;
     setState(() {
       _selectionMode = false;
@@ -507,7 +511,7 @@ class _CharacterListScreenState extends State<CharacterListScreen>
                 false;
           },
           onDismissed: (_) {
-            _deleteCharacters([character.id]);
+            _deleteCharacters([character.id], deleteAnyRemote: _activeIndex == 1);
           },
           background: Container(
             margin: const EdgeInsets.symmetric(vertical: 4),
@@ -566,7 +570,10 @@ class _CharacterListScreenState extends State<CharacterListScreen>
           character: character,
           index: index,
           onDelete: () async {
-            await _deleteCharacters([character.id]);
+            await _deleteCharacters(
+              [character.id],
+              deleteAnyRemote: _activeIndex == 1,
+            );
           },
           onCharacterUpdated: (updated) async {
             await _storage.save(updated);

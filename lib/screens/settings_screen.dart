@@ -626,7 +626,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildField(
           entry.urlCtrl,
           'Image API URL',
-          'https://api.openai.com 或完整 /v1/images/generations',
+          'https://ai.yidon.top/v1/ 或完整 /v1/images/generations',
           Icons.image_search_rounded,
         ),
         const SizedBox(height: 12),
@@ -659,14 +659,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildField(
           entry.qualityCtrl,
           'Quality',
-          'auto',
+          'auto 或 high',
           Icons.high_quality_rounded,
         ),
         const SizedBox(height: 12),
         _buildField(
           entry.outputFormatCtrl,
           'Output Format',
-          'png',
+          'png / jpeg / webp',
           Icons.file_download_rounded,
         ),
       ],
@@ -1187,6 +1187,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         )
         .toList();
 
+    final imageQuality = _imageConfig.qualityCtrl.text.trim().toLowerCase();
+    final imageOutputFormat = _imageConfig.outputFormatCtrl.text
+        .trim()
+        .toLowerCase();
     final settings = AiSettings(
       configs: configs,
       activeConfigIndex: _activeIndex,
@@ -1201,12 +1205,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         size: _imageConfig.sizeCtrl.text.trim().isEmpty
             ? '1024x1024'
             : _imageConfig.sizeCtrl.text.trim(),
-        quality: _imageConfig.qualityCtrl.text.trim().isEmpty
-            ? 'auto'
-            : _imageConfig.qualityCtrl.text.trim(),
-        outputFormat: _imageConfig.outputFormatCtrl.text.trim().isEmpty
-            ? 'png'
-            : _imageConfig.outputFormatCtrl.text.trim(),
+        quality: imageQuality.isEmpty ? 'auto' : imageQuality,
+        outputFormat: imageOutputFormat.isEmpty ? 'png' : imageOutputFormat,
       ),
     );
     await _settingsService.save(settings);

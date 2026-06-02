@@ -69,6 +69,12 @@ class AvatarGenerationService {
       throw Exception('请先在设置中配置头像生成 API Key');
     }
 
+    final configuredOutputFormat = config.outputFormat.trim().toLowerCase();
+    final outputFormat = configuredOutputFormat.isEmpty
+        ? 'png'
+        : configuredOutputFormat == 'jpg'
+        ? 'jpeg'
+        : configuredOutputFormat;
     final body = <String, Object>{
       'model': config.model.trim().isEmpty
           ? 'gpt-image-2'
@@ -76,14 +82,12 @@ class AvatarGenerationService {
       'prompt': prompt.trim(),
       'n': 1,
       'size': config.size.trim().isEmpty ? '1024x1024' : config.size.trim(),
+      'output_format': outputFormat,
     };
-    final quality = config.quality.trim();
+    final quality = config.quality.trim().toLowerCase();
     if (quality.isNotEmpty && quality != 'auto') {
       body['quality'] = quality;
     }
-    final outputFormat = config.outputFormat.trim().isEmpty
-        ? 'png'
-        : config.outputFormat.trim().toLowerCase();
 
     final endpoint = _imageEndpoint(config.baseUrl);
     onProgress?.call('正在请求 ${body['model']} 生成头像...\nPOST $endpoint');
